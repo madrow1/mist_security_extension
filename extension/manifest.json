@@ -1,31 +1,42 @@
 {
   "manifest_version": 3,
-  "name": "The name of your extension",
-  "description": "The description of your extension",
-  "version": "1.0",
+  "name": "Mist Security Audit",
+  "description": "High level security audit tool for Mist",
+  "version": "0.1",
   "icons": {
-    "16": "icons/icon.png",
-    "32": "icons/icon.png",
-    "48": "icons/icon.png",
-    "128": "icons/icon.png"
+    "48": "icons/favicon-48x48.png",
+    "128": "icons/favicon-128x128.png"
   },
+
   "background": {
     "service_worker": "background.js"
   },
   "action": {
+    "default_popup" : "popup/popup.html",
+    "default_title" : "Mist Security Audit",
     "default_icon": {
-      "16": "icons/icon.png",
-      "32": "icons/icon.png",
-      "48": "icons/icon.png",
-      "128": "icons/icon.png"
+      "48": "icons/favicon-48x48.png",
+      "128": "icons/favicon-128x128.png"
     },
-    "permissions": ["tabs", "activeTab"]
+    "permissions": ["tabs", "activeTab", "cookies", "storage", "scripting"]
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   },
   "content_scripts": [
     {
-      "js": ["./content.js"],
-      "matches": ["*://google.com/*"],
+      "js": [
+        "content.js",
+        "popup/popup.js"],
+      "matches": ["https://*/*"],
       "run_at": "document_end"
     }
+  ],
+  "host_permissions": [
+    "https://*.mist.com/*",
+    "https://*.mistsys.com/*",
+    "https://*.mist-federal.com/*",
+    "https://*.ai.juniper.net/*"
   ]
 }
+
