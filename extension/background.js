@@ -61,31 +61,63 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   switch (request.action) {
     case 'pie':
-      endpoint = '';
-      console.log("Pie Chart")
+      endpoint = 'http://127.0.0.1:8510/api/pie-chart';
       break;
     case 'histogram':
-      endpoint = '';
+      endpoint = 'http://127.0.0.1:8510/api/histogram';
       break;
     case 'switches':
-      endpoint = '';
+      endpoint = 'http://127.0.0.1:8510/api/switch-list';
       break;
     case 'aps':
-      endpoint = '';
+      endpoint = 'http://127.0.0.1:8510/api/ap-list';
       break;
     case 'settings':
-      endpoint = '';
+      endpoint = 'http://127.0.0.1:8510/api/settings';
       break;
     default:
       sendResponse({ error: 'Unknown action' });
       return;
   }
 
-  fetch(endpoint)
-    .then(res => res.json())
-    .then(data => sendResponse(data))
-    .catch(err => sendResponse({ error: err.message }));
+    // Make API call with proper error handling and timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-  return true; // Keep message channel open for async response
+    fetch(endpoint, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        signal: controller.signal
+    })
+        .then(response => {
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            sendResponse({ success: true, data: data });
+        })
+        .catch(err => {
+            clearTimeout(timeoutId);
+            console.error(`API call failed for ${request.action}:`, err);
+            
+            let errorMessage = err.message;
+            if (err.name === 'AbortError') {
+                errorMessage = 'Request timeout';
+            } else if (err.message.includes('Failed to fetch')) {
+                errorMessage = 'Unable to connect to API server';
+            }
+            
+            sendResponse({ 
+                success: false, 
+                error: errorMessage,
+                action: request.action 
+            });
+        });
+
+    return true; 
 });
-
