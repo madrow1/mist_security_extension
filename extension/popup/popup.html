@@ -33,7 +33,7 @@
                 width: 48px;
                 flex-shrink: 0;
                 position: relative;
-                top: 2px;
+                top: 10px;
             }
 
             .banner-title {
@@ -126,6 +126,7 @@
 
             .paragraphs {
                 font-family: inherit;
+                text-align: center;
             }
 
             @media (max-width: 400px) {
@@ -172,11 +173,12 @@
                 <p class="paragraphs" id="org-id"></p>
                 <h3>Site ID</h3>
                 <p class="paragraphs" id="site-id"></p>
-                <h2 class="header-content"> Please enter an your API key </h2>
+                <h2 class="header-content"> Please enter your API key </h2>
                 <form>
                     <input class="input-box" id='api-input-box' type="text">
                     <input class="submit-button" id="submit-button" type="button" value="Submit" name="apiKeyValue">
                 </form>
+                <button class="submit-button" id="purge-api-btn" type="button" style="margin-top:10px; display:none;">Purge API Key</button>
             </div>
         </main>
         

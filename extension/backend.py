@@ -5,6 +5,7 @@ import requests
 import os
 #from tests import get_api, get_site_api, get_sites_data, read_json_file, json_to_bullet_points
 from werkzeug.exceptions import BadRequest
+import mysql.connector 
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -37,6 +38,31 @@ def get_ap_list():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/check-existing-data', methods=['GET'])
+def check_existing_data():
+    org_id = request.args.get('org_id')
+    if not org_id:
+        return jsonify({"error": "Missing org_id"}), 400
+
+    try:
+        db_connector = mysql.connector.connect(
+            host='localhost',
+            user='admin',
+            password='V0ldem0rt',
+            database='customer'
+        )
+        sqlcursor = db_connector.cursor()
+        sql = "SELECT COUNT(*) FROM customer_data WHERE org_id = %s"
+        sqlcursor.execute(sql, (org_id,))
+        (count,) = sqlcursor.fetchone()
+        sqlcursor.close()
+        db_connector.close()
+        return jsonify({"exists": count > 0})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
 @app.route('/api/settings', methods=['GET', 'POST'])
 def get_settings():
     if request.method == 'POST':
@@ -58,6 +84,67 @@ def get_settings():
             return jsonify({"message": "Settings endpoint", "status": "success"})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+        
+@app.route('/api/data', methods=['POST'])
+def insert_customer_data():
+    try:
+        data = request.get_json()
+        print("Received data:", data)
+        org_id = data.get('org_id')
+        site_id = data.get('site_id')
+        api_key = data.get('api_key')
+
+        # Validate input
+        if not org_id or not site_id or not api_key:
+            return jsonify({"error": "Missing org_id, site_id, or api_key"}), 400
+
+        db_connector = mysql.connector.connect(
+            host='localhost',
+            user='admin',
+            password='V0ldem0rt',
+            database='customer'
+        )
+
+        sqlcursor = db_connector.cursor()
+
+        sql = "INSERT INTO customer_data (org_id, site_id, api_key) VALUES (%s, %s, %s)"
+        val = (org_id, site_id, api_key)
+        
+        sqlcursor.execute(sql, val)
+        db_connector.commit()
+
+        sqlcursor.close()
+        db_connector.close()
+
+        return jsonify({"success": True, "message": "Data inserted successfully"})  
+
+    except Exception as e:
+        print("Error in /api/data:", e)
+        return jsonify({"Error": str(e)}), 500
+
+@app.route('/api/purge-api-key', methods=['POST'])
+def purge_api_key():
+    try:
+        data = request.get_json()
+        org_id = data.get('org_id')
+        if not org_id:
+            return jsonify({"error": "Missing org_id"}), 400
+
+        db_connector = mysql.connector.connect(
+            host='localhost',
+            user='admin',
+            password='V0ldem0rt',
+            database='customer'
+        )
+        sqlcursor = db_connector.cursor()
+        sql = "DELETE FROM customer_data WHERE org_id = %s"
+        sqlcursor.execute(sql, (org_id,))
+        db_connector.commit()
+        sqlcursor.close()
+        db_connector.close()
+        return jsonify({"success": True, "message": "API key purged"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.errorhandler(404)
 def not_found(error):
