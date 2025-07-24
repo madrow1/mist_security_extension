@@ -18,3 +18,4 @@ env/
 api.json
 localhost.session.sql
 env.json
+encryption.key

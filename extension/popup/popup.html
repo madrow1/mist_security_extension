@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="Mist Security Audit Tool - Browser Extension">
         <link rel="icon" type="image/x-icon" href="favicon.ico">
         <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
         <style>
@@ -14,6 +15,8 @@
                 margin: 0;
                 font-family: 'Lato', Arial, sans-serif;
                 font-weight: 400;
+                width: 400px;
+                min-height: 300px;
             }
 
             .banner {
@@ -29,8 +32,8 @@
             }
 
             .banner-logo {
-                height: 48px;
-                width: 48px;
+                height: 64px;
+                width: 64px;
                 flex-shrink: 0;
                 position: relative;
                 top: 10px;
@@ -53,13 +56,23 @@
 
             .popup-content {
                 padding: 15px;
-                min-height: 20px; 
+                min-height: 60px;
+                max-height: 200px;
+                overflow-y: auto;
+                white-space: pre-wrap;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                background-color: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 4px;
+                margin: 0 15px;
             }
 
             .button-bar {
                 display: flex;
                 border-top: 1px solid #ccc;
                 background-color: #f7f7f7;
+                margin-top: 15px;
             }
 
             .action-button {
@@ -67,57 +80,18 @@
                 border: none;
                 border-right: 1px solid #ccc;
                 background-color: #f7f7f7;
-                width: 25%;
                 color: #424242;
                 cursor: pointer;
                 height: 48px;
-                font-size: 14px;
+                min-width: 64px;
+                width: auto;
+                font-size: 16px;
                 font-weight: 300;
                 font-family: inherit;
                 text-align: center;
-                transition: background-color 0.6s ease, color 0.6s ease;
+                transition: all 0.3s ease;
                 white-space: nowrap;
                 padding: 0 4px;
-            }
-
-            .submit-button {
-                flex: 1;
-                border: lightblue;
-                border-right: 1px solid #ccc;
-                background-color: #a5a5a5;
-                color: #ffffff;
-                cursor: pointer;
-                height: 20px;
-                width: auto;
-                font-size: 14px;
-                font-family: inherit;
-                text-align: center;
-                white-space: nowrap;
-                transition: background-color 0.6s ease, color 0.6s ease;
-                padding: 0 4px;
-                border-radius: 5px;
-            }
-
-            .purge-button {
-                flex: 1;
-                border: lightblue;
-                border-right: 1px solid #ccc;
-                background-color: #E43D30;
-                border-radius: 5px;
-                color: #ffffff;
-                cursor: pointer;
-                height: 28px;
-                width: auto;
-                font-size: 14px;
-                font-family: inherit;
-                text-align: center;
-                white-space: nowrap;
-                transition: background-color 0.6s ease, color 0.6s ease;
-                padding: 0 4px;
-            }
-
-            .purge-button:hover {
-                background-color: #de7c75; 
             }
 
             .action-button:last-child {
@@ -126,15 +100,16 @@
 
             .action-button:hover {
                 background-color: #e0e0e0;
-            }
-
-            .submit-button:hover {
-                background-color: #e0e0e0;
+                transform: translateY(-1px);
             }
 
             .action-button:focus {
                 outline: 2px solid #0066cc;
                 outline-offset: -2px;
+            }
+
+            .action-button:active {
+                transform: translateY(0);
             }
 
             .action-button.clicked {
@@ -143,32 +118,173 @@
                 font-weight: 400;
             }
 
-            .input-box {
-                margin-bottom: 20px;
-            }
-
-            .paragraphs {
-                font-family: inherit;
-                text-align: center;
-                margin-left: 10%;
-                margin-right: 10%;
-            }
-
-            @media (max-width: 400px) {
-                .action-button {
-                    font-size: 12px;
-                    padding: 0 2px;
-                }
-                
-                .header-content {
-                    font-size: 16px;
-                }
+            .action-button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
             }
 
             .settings-menu {
                 display: none;
                 color: #003366;
                 text-align: center;
+                padding: 15px;
+                animation: fadeIn 0.3s ease-in;
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            .settings-section {
+                margin-bottom: 20px;
+                padding: 10px;
+                background-color: #f8f9fa;
+                border-radius: 6px;
+                border: 1px solid #e9ecef;
+            }
+
+            .settings-section h3 {
+                margin: 0 0 8px 0;
+                font-size: 14px;
+                font-weight: 600;
+                color: #495057;
+            }
+
+            .settings-value {
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                color: #6c757d;
+                word-break: break-all;
+                background-color: white;
+                padding: 8px;
+                border-radius: 4px;
+                border: 1px solid #dee2e6;
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+                color: #495057;
+                text-align: left;
+            }
+
+            .input-box {
+                width: 100%;
+                padding: 10px;
+                border: 2px solid #dee2e6;
+                border-radius: 6px;
+                font-family: inherit;
+                font-size: 14px;
+                transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            }
+
+            .input-box:focus {
+                outline: none;
+                border-color: #0066cc;
+                box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+            }
+
+            .input-box:disabled {
+                background-color: #e9ecef;
+                color: #6c757d;
+                cursor: not-allowed;
+            }
+
+            .submit-button {
+                width: 100%;
+                padding: 10px;
+                border: none;
+                background-color: #28a745;
+                color: white;
+                font-size: 14px;
+                font-weight: 600;
+                font-family: inherit;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                margin-top: 10px;
+            }
+
+            .submit-button:hover:not(:disabled) {
+                background-color: #218838;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .submit-button:disabled {
+                background-color: #6c757d;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+            .purge-button {
+                width: 100%;
+                padding: 10px;
+                border: none;
+                background-color: #dc3545;
+                color: white;
+                font-size: 14px;
+                font-weight: 600;
+                font-family: inherit;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                margin-top: 15px;
+                display: none;
+            }
+
+            .purge-button:hover:not(:disabled) {
+                background-color: #c82333;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .purge-button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+            .message {
+                padding: 10px;
+                margin: 10px 0;
+                border-radius: 6px;
+                font-size: 13px;
+                line-height: 1.4;
+            }
+
+            .message.info {
+                background-color: #d1ecf1;
+                color: #0c5460;
+                border: 1px solid #bee5eb;
+            }
+
+            .message.success {
+                background-color: #d4edda;
+                color: #155724;
+                border: 1px solid #c3e6cb;
+            }
+
+            .message.error {
+                background-color: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+            }
+
+            .paragraphs {
+                font-family: inherit;
+                text-align: center;
+                margin: 10px 0;
+                line-height: 1.5;
             }
 
             #api-obscured {
@@ -177,7 +293,30 @@
                 word-break: break-word;
                 text-align: center;
                 margin-top: 10px;
+                padding: 10px;
+                background-color: #e9ecef;
+                border-radius: 4px;
+                font-family: 'Courier New', monospace;
             }
+
+            .loading {
+                opacity: 0.6;
+                pointer-events: none;
+            }
+                
+            .action-button {
+                font-size: 11px;
+                padding: 0 2px;
+            }
+                
+            .header-content {
+                font-size: 16px;
+            }
+            
+            .popup-content {
+                padding: 10px;
+            }
+            
 
         </style>
         <script src="popup.js" defer></script>
@@ -190,29 +329,85 @@
         
         <main>
             <h1 class="header-content">Mist Security Audit Tool</h1>
-            <div class="popup-content" id="content-area"></div>
-            <div id='settings-menu' class="settings-menu">
-                <h3>API URL</h3>
-                <p class="paragraphs" id="api-url"></p>
-                <h3>Organisation ID</h3>
-                <p class="paragraphs" id="org-id"></p>
-                <h3>Site ID</h3>
-                <p class="paragraphs" id="site-id"></p>
-                <h2 class="header-content"> Please enter your API key </h2>
-                <form>
-                    <input class="input-box" id='api-input-box' type="text">
-                    <input class="submit-button" id="submit-button" type="button" value="Submit" name="apiKeyValue">
+            
+            <div class="popup-content" id="content-area" role="main" aria-live="polite">Select an action from the menu below to get started.</div>
+            
+            <div id="settings-menu" class="settings-menu" role="tabpanel" aria-labelledby="settings-btn">
+                <div class="settings-section">
+                    <h3>API Configuration</h3>
+                    <div class="settings-value" id="api-url">Loading...</div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Organization ID</h3>
+                    <div class="settings-value" id="org-id">Loading...</div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Site ID</h3>
+                    <div class="settings-value" id="site-id">Loading...</div>
+                </div>
+                
+                <form novalidate>
+                    <div class="form-group">
+                        <label for="api-input-box">API Key</label>
+                        <input 
+                            class="input-box" 
+                            id="api-input-box" 
+                            type="password"
+                            placeholder="Enter your Mist API key"
+                            autocomplete="off"
+                            spellcheck="false"
+                            aria-describedby="api-key-help"
+                        >
+                        <small id="api-key-help" style="color: #6c757d; font-size: 12px;">
+                            Your API key will be encrypted and stored securely
+                        </small>
+                    </div>
+                    
+                    <button 
+                        class="submit-button" 
+                        id="submit-button" 
+                        type="button"
+                        aria-describedby="submit-help"
+                    >
+                        Save API Key
+                    </button>
+                    <small id="submit-help" style="display: none; color: #6c757d; font-size: 12px;">
+                        Click to securely save your API key
+                    </small>
                 </form>
-                <button class="purge-button" id="purge-api-btn" type="button" style="display:none;">Purge API Key</button>
+                
+                <button 
+                    class="purge-button" 
+                    id="purge-api-btn" 
+                    type="button"
+                    aria-describedby="purge-help"
+                >
+                    Purge API Key
+                </button>
+                <small id="purge-help" style="display: none; color: #6c757d; font-size: 12px;">
+                    This will permanently delete your stored API key
+                </small>
             </div>
         </main>
         
         <nav class="button-bar" role="navigation" aria-label="Tool actions">
-            <button class="action-button" data-action="pie" type="button">Pie Chart</button>
-            <button class="action-button" data-action="histogram" type="button">Histogram</button>
-            <button class="action-button" data-action="switches" type="button">Switch List</button>
-            <button class="action-button" data-action="aps" type="button">AP List</button>
-            <button id="settings-btn" class="action-button" data-action="settings" type="button">Settings</button>
+            <button class="action-button" data-action="pie" type="button" title="View security metrics pie chart">
+                Pie Chart
+            </button>
+            <button class="action-button" data-action="histogram" type="button" title="View security trends histogram">
+                Histogram
+            </button>
+            <button class="action-button" data-action="switches" type="button" title="List network switches">
+                Switches
+            </button>
+            <button class="action-button" data-action="aps" type="button" title="List access points">
+                APs
+            </button>
+            <button id="settings-btn" class="action-button" data-action="settings" type="button" title="Configure API settings">
+                Settings
+            </button>
         </nav>
     </body>
 </html>
