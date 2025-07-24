@@ -10,6 +10,21 @@ import mysql.connector
 app = Flask(__name__)
 cors = CORS(app)
 
+try:
+    with open('.env.json') as f:
+        sqlcred = json.load(f)
+except Exception as e:
+    print("Error loading .env.json:", e)
+    exit(1)
+
+def get_db_connection():
+    return mysql.connector.connect(
+        host=sqlcred['host'],
+        user=sqlcred['user'],
+        password=sqlcred['password'],
+        database=sqlcred['database']
+    )
+
 @app.route('/api/pie-chart', methods=['GET', 'POST'])
 def get_pie_chart():
     try:
@@ -46,10 +61,10 @@ def check_existing_data():
 
     try:
         db_connector = mysql.connector.connect(
-            host='localhost',
-            user='admin',
-            password='V0ldem0rt',
-            database='customer'
+            host=sqlcred['host'],
+            user=sqlcred['user'],
+            password=sqlcred['password'],
+            database=sqlcred['database']
         )
         sqlcursor = db_connector.cursor()
         sql = "SELECT COUNT(*) FROM customer_data WHERE org_id = %s"
@@ -98,12 +113,7 @@ def insert_customer_data():
         if not org_id or not site_id or not api_key:
             return jsonify({"error": "Missing org_id, site_id, or api_key"}), 400
 
-        db_connector = mysql.connector.connect(
-            host='localhost',
-            user='admin',
-            password='V0ldem0rt',
-            database='customer'
-        )
+        db_connector = get_db_connection()
 
         sqlcursor = db_connector.cursor()
 
@@ -130,12 +140,8 @@ def purge_api_key():
         if not org_id:
             return jsonify({"error": "Missing org_id"}), 400
 
-        db_connector = mysql.connector.connect(
-            host='localhost',
-            user='admin',
-            password='V0ldem0rt',
-            database='customer'
-        )
+        db_connector = get_db_connection
+        
         sqlcursor = db_connector.cursor()
         sql = "DELETE FROM customer_data WHERE org_id = %s"
         sqlcursor.execute(sql, (org_id,))
