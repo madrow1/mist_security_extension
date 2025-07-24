@@ -17,4 +17,4 @@ Thumbs.db
 env/
 api.json
 localhost.session.sql
-.env.json
+env.json

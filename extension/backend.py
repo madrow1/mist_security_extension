@@ -11,8 +11,9 @@ app = Flask(__name__)
 cors = CORS(app)
 
 try:
-    with open('.env.json') as f:
+    with open('env.json') as f:
         sqlcred = json.load(f)
+        print(sqlcred)
 except Exception as e:
     print("Error loading .env.json:", e)
     exit(1)
@@ -115,6 +116,8 @@ def insert_customer_data():
 
         db_connector = get_db_connection()
 
+        print(db_connector)
+
         sqlcursor = db_connector.cursor()
 
         sql = "INSERT INTO customer_data (org_id, site_id, api_key) VALUES (%s, %s, %s)"
@@ -140,8 +143,8 @@ def purge_api_key():
         if not org_id:
             return jsonify({"error": "Missing org_id"}), 400
 
-        db_connector = get_db_connection
-        
+        db_connector = get_db_connection()
+
         sqlcursor = db_connector.cursor()
         sql = "DELETE FROM customer_data WHERE org_id = %s"
         sqlcursor.execute(sql, (org_id,))
