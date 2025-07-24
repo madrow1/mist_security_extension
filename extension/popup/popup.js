@@ -10,13 +10,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const purgeBtn = document.getElementById('purge-api-btn');
     let org_id = null;
     let site_id = null; 
+    const apiHost = 'localhost';
 
+    // JS listens for HTML buttons to be clicked. In click triggers events.
     buttons.forEach(button => {
         button.addEventListener('click', () => {
-            // Toggle .clicked class
+            // Toggle .clicked class, updating the color profile of the clicked button 
             buttons.forEach(btn => btn.classList.remove('clicked'));
             button.classList.add('clicked');
 
+            // data-action is the class of the button in HTML
             const action = button.getAttribute('data-action');
 
             if (settingsMenu) {
@@ -32,13 +35,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = new URL(tab.url);
                 const hostname = url.hostname;
                 const fullURL = tab.url;
-
+            
+                // uses JS.replace() to strip the "manage" from the beginning of the standard URL and replace it with "api"
                 const api_url = /^manage\./.test(hostname)
                     ? hostname.replace(/^manage\./, 'api.')
                     : /^integration\./.test(hostname)
                     ? hostname.replace(/^integration\./, 'api.')
                     : 'api.mist.com';
 
+                // regex strips the org_id or site_id from the full URL string
                 org_id = fullURL.match(/[?&]org_id=([0-9a-fA-F-]{36})/)?.[1] || null;
                 site_id = fullURL.match(/([0-9a-fA-F-]{36})$/)?.[1] || null;
 
@@ -48,7 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Only run this check if we're in the settings menu
                 if (action === 'settings' && org_id) {
-                    fetch(`http://localhost:8510/api/check-existing-data?org_id=${encodeURIComponent(org_id)}`)
+                    // API call to the Flask backend to check whether or not the org_id retrieved already exists in the database. 
+                    // If it already exists then the option to input a new API key cannot be input
+                    fetch(`http://${apiHost}:8510/api/check-existing-data?org_id=${encodeURIComponent(org_id)}`)
                         .then(response => response.json())
                         .then(data => {
                             if (data.exists) {
@@ -60,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     apiInput.value = '';
                                 }
                                 if (apiSubmitButton) apiSubmitButton.disabled = true;
-                                // Optionally show a message
+                                // Optionally show a message, this message will only show if there is already an API key.
                                 if (settingsMenu) {
                                     let msg = document.getElementById('api-exists-msg');
                                     if (!msg) {
@@ -95,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const key = apiInput.value.trim();
             if (!key) return;
 
-            fetch('http://localhost:8510/api/data', {
+            fetch(`http://${apiHost}:8510/api/data`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -131,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!org_id) return;
             purgeBtn.disabled = true;
             purgeBtn.textContent = "Purging...";
-            fetch('http://localhost:8510/api/purge-api-key', {
+            fetch(`http://${apiHost}:8510/api/purge-api-key`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ org_id })

@@ -7,17 +7,21 @@ import os
 from werkzeug.exceptions import BadRequest
 import mysql.connector 
 
+# Establish Flask application and start CORS scripting
 app = Flask(__name__)
 cors = CORS(app)
 
+# env.json contains the connection strings for connecting to the database.
 try:
     with open('env.json') as f:
+        #credentials are loaded into sqlcred to be read back later
         sqlcred = json.load(f)
-        print(sqlcred)
+        #print(sqlcred)
 except Exception as e:
     print("Error loading .env.json:", e)
     exit(1)
 
+# Single database function that can be called multiple times throughout the code. sqlcred is called here as a python dictionary to retrieve sql connection string.
 def get_db_connection():
     return mysql.connector.connect(
         host=sqlcred['host'],
@@ -104,8 +108,9 @@ def get_settings():
 @app.route('/api/data', methods=['POST'])
 def insert_customer_data():
     try:
+        #recieve data from the JS route API call.
         data = request.get_json()
-        print("Received data:", data)
+        #print("Received data:", data)
         org_id = data.get('org_id')
         site_id = data.get('site_id')
         api_key = data.get('api_key')
@@ -116,7 +121,7 @@ def insert_customer_data():
 
         db_connector = get_db_connection()
 
-        print(db_connector)
+        #print(db_connector)
 
         sqlcursor = db_connector.cursor()
 
@@ -135,6 +140,7 @@ def insert_customer_data():
         print("Error in /api/data:", e)
         return jsonify({"Error": str(e)}), 500
 
+# This route can only be called if the API key already exists in the customer database. On call the key will be purged alongside connected data.
 @app.route('/api/purge-api-key', methods=['POST'])
 def purge_api_key():
     try:
@@ -164,7 +170,4 @@ def internal_error(error):
     return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
-    if not os.path.exists('api.json'):
-        print("Warning: API JSON File not found")
-    
     app.run(debug=True, host='0.0.0.0', port=8510)

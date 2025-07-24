@@ -26,6 +26,7 @@ function getUrl(tabId) {
     }, 100);
 }
 
+// Borrowed code from the other Mist API extension. Checks the current URL and updates the badge to reflect.
 function checkUrl(tabUrl) {
     const org_re = /https:\/\/(manage|integration|manage-staging)\.(?<host>[a-z0-9.]*(mist|mistsys|mist-federal)\.com)\/admin\/\?org_id=(?<org_id>[0-9a-f-]*)#!/yis;
     const org = org_re.exec(tabUrl);
