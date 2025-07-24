@@ -87,7 +87,7 @@
                 background-color: #a5a5a5;
                 color: #ffffff;
                 cursor: pointer;
-                height: auto;
+                height: 20px;
                 width: auto;
                 font-size: 14px;
                 font-family: inherit;
@@ -95,6 +95,29 @@
                 white-space: nowrap;
                 transition: background-color 0.6s ease, color 0.6s ease;
                 padding: 0 4px;
+                border-radius: 5px;
+            }
+
+            .purge-button {
+                flex: 1;
+                border: lightblue;
+                border-right: 1px solid #ccc;
+                background-color: #E43D30;
+                border-radius: 5px;
+                color: #ffffff;
+                cursor: pointer;
+                height: 28px;
+                width: auto;
+                font-size: 14px;
+                font-family: inherit;
+                text-align: center;
+                white-space: nowrap;
+                transition: background-color 0.6s ease, color 0.6s ease;
+                padding: 0 4px;
+            }
+
+            .purge-button:hover {
+                background-color: #de7c75; 
             }
 
             .action-button:last-child {
@@ -127,6 +150,8 @@
             .paragraphs {
                 font-family: inherit;
                 text-align: center;
+                margin-left: 10%;
+                margin-right: 10%;
             }
 
             @media (max-width: 400px) {
@@ -178,7 +203,7 @@
                     <input class="input-box" id='api-input-box' type="text">
                     <input class="submit-button" id="submit-button" type="button" value="Submit" name="apiKeyValue">
                 </form>
-                <button class="submit-button" id="purge-api-btn" type="button" style="margin-top:10px; display:none;">Purge API Key</button>
+                <button class="purge-button" id="purge-api-btn" type="button" style="display:none;">Purge API Key</button>
             </div>
         </main>
         

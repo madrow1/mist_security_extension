@@ -33,28 +33,28 @@ def get_db_connection():
 @app.route('/api/pie-chart', methods=['GET', 'POST'])
 def get_pie_chart():
     try:
-        return jsonify({"message": "Pie chart endpoint", "status": "success"})
+        return jsonify({"message": "Pie chart", "status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/histogram', methods=['GET', 'POST'])
 def get_histogram():
     try:
-        return jsonify({"message": "Histogram endpoint", "status": "success"})
+        return jsonify({"message": "Histogram", "status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/switch-list', methods=['GET', 'POST'])
 def get_switch_list():
     try:
-        return jsonify({"message": "Switch list endpoint", "status": "success"})
+        return jsonify({"message": "Switch List", "status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/ap-list', methods=['GET', 'POST'])
 def get_ap_list():
     try:
-        return jsonify({"message": "AP list endpoint", "status": "success"})
+        return jsonify({"message": "AP List", "status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -101,7 +101,7 @@ def get_settings():
             
     if request.method == 'GET':
         try: 
-            return jsonify({"message": "Settings endpoint", "status": "success"})
+            return jsonify({"message": "Settings Menu", "status": "success"})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
         

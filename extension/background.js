@@ -1,4 +1,6 @@
+const apiAddress = '127.0.0.1'
 var browser_name = "ffx";
+
 if (typeof browser === "undefined") {
     var browser = chrome;
     browser_name = "chrome";
@@ -58,67 +60,84 @@ function apiBadge(color) {
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  let endpoint;
+  let endpoint, fetchOptions = {};
 
   switch (request.action) {
     case 'pie':
-      endpoint = 'http://127.0.0.1:8510/api/pie-chart';
+      endpoint = `http://${apiAddress}:8510/api/pie-chart`;
+      fetchOptions.method = 'GET';
       break;
     case 'histogram':
-      endpoint = 'http://127.0.0.1:8510/api/histogram';
+      endpoint = `http://${apiAddress}:8510/api/histogram`;
+      fetchOptions.method = 'GET';
       break;
     case 'switches':
-      endpoint = 'http://127.0.0.1:8510/api/switch-list';
+      endpoint = `http://${apiAddress}:8510/api/switch-list`;
+      fetchOptions.method = 'GET';
       break;
     case 'aps':
-      endpoint = 'http://127.0.0.1:8510/api/ap-list';
+      endpoint = `http://${apiAddress}:8510/api/ap-list`;
+      fetchOptions.method = 'GET';
       break;
     case 'settings':
-      endpoint = 'http://127.0.0.1:8510/api/settings';
+      endpoint = `http://${apiAddress}:8510/api/settings`;
+      fetchOptions.method = 'GET';
+      break;
+    case 'check-existing-data':
+      endpoint = `http://${apiAddress}:8510/api/check-existing-data?org_id=${encodeURIComponent(request.org_id)}`;
+      fetchOptions.method = 'GET';
+      break;
+    case 'data':
+      endpoint = `http://${apiAddress}:8510/api/data`;
+      fetchOptions.method = 'POST';
+      fetchOptions.headers = { 'Content-Type': 'application/json' };
+      fetchOptions.body = JSON.stringify({
+        org_id: request.org_id,
+        site_id: request.site_id,
+        api_key: request.api_key
+      });
+      break;
+    case 'purge-api-key':
+      endpoint = `http://${apiAddress}:8510/api/purge-api-key`;
+      fetchOptions.method = 'POST';
+      fetchOptions.headers = { 'Content-Type': 'application/json' };
+      fetchOptions.body = JSON.stringify({ org_id: request.org_id });
       break;
     default:
       sendResponse({ error: 'Unknown action' });
       return;
   }
 
-    // Make API call with proper error handling and timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+  // Make API call with proper error handling and timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+  fetchOptions.signal = controller.signal;
 
-    fetch(endpoint, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        signal: controller.signal
+  fetch(endpoint, fetchOptions)
+    .then(response => {
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
     })
-        .then(response => {
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            sendResponse({ success: true, data: data });
-        })
-        .catch(err => {
-            clearTimeout(timeoutId);
-            console.error(`API call failed for ${request.action}:`, err);
-            
-            let errorMessage = err.message;
-            if (err.name === 'AbortError') {
-                errorMessage = 'Request timeout';
-            } else if (err.message.includes('Failed to fetch')) {
-                errorMessage = 'Unable to connect to API server';
-            }
-            
-            sendResponse({ 
-                success: false, 
-                error: errorMessage,
-                action: request.action 
-            });
-        });
+    .then(data => {
+      sendResponse({ success: true, data: data });
+    })
+    .catch(err => {
+      clearTimeout(timeoutId);
+      let errorMessage = err.message;
+      if (err.name === 'AbortError') {
+        errorMessage = 'Request timeout';
+      } else if (err.message.includes('Failed to fetch')) {
+        errorMessage = 'Unable to connect to API server';
+      }
+      sendResponse({ 
+        success: false, 
+        error: errorMessage,
+        action: request.action 
+      });
+    });
 
-    return true; 
+  return true; // Keep the message channel open for async response
 });
