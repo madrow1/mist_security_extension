@@ -2,23 +2,14 @@
 import requests
 import json 
 
-def get_api(file):
-    f = open(file)
-    configs = json.load(f)
-
-    api_url = '{0}orgs/{1}'.format(configs['api']['mist_url'],configs['api']['org_id'])
-    headers = {'Content-Type': 'application/json',
-               'Authorization': 'Token {}'.format(configs['api']['token'])}
-    
-    return api_url,headers
-
-
-def check_admin():
+def check_admin(site_ids, org_id, api_url, token):
     score = 0 
     count = 0
-    api_response = get_api('api.json')
+    headers = {'Content-Type': 'application/json',
+               'Authorization': 'Token {}'.format(token)}
+    
     # Note that if no settings have been changed at the org level then Mist does not populate this response.
-    response = requests.get("{}/admins".format(api_response[0]), headers=api_response[1])
+    response = requests.get("https://{0}/api/v1/orgs/{1}/admins".format(api_url, org_id), headers=headers)
     data = response.json()
     admins = {}
     
@@ -54,4 +45,3 @@ def check_admin():
             
     return int(final_score), failing_admins
 
-check_admin()

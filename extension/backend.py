@@ -10,6 +10,7 @@ from cryptography.fernet import Fernet
 import hashlib
 import secrets
 import requests
+from tests import check_admin
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Configure CORS for specific origins (update with your actual frontend origins)
-CORS(app, origins=["chrome-extension://*", "moz-extension://*"])
+CORS(app)
 
 # Load configuration from environment file
 try:
@@ -113,10 +114,16 @@ def get_pie_chart():
 
         db_connection = get_db_connection()
         cursor = db_connection.cursor()
+        cursor2 = db_connection.cursor()
 
         # Retrieve the encrypted API key for the org_id
-        cursor.execute("SELECT api_key FROM customer_data WHERE org_id = %s", (org_id,))
+        cursor.execute("SELECT api_key, api_url FROM customer_data WHERE org_id = %s", (org_id,))
         result = cursor.fetchone()
+
+        cursor2.execute("SELECT site_id FROM customer_sites WHERE org_id = %s", (org_id,))
+        site_id_sql= cursor2.fetchall()
+
+        cursor2.close()
         cursor.close()
         db_connection.close()
 
@@ -124,11 +131,23 @@ def get_pie_chart():
             return jsonify({"error": "API key not found for this organization"}), 404
 
         encrypted_api_key = result[0]
+        api_url = result[1]
+
         try:
             api_key = decrypt_api_key(encrypted_api_key)
         except Exception as e:
             logger.error(f"Error decrypting API key: {e}")
             return jsonify({"error": "Failed to decrypt API key"}), 500
+        
+
+        site_ids = [row[0] for row in site_id_sql]
+
+        #print(site_ids)
+        #print(api_url)
+
+        admin_score, failing_admins = check_admin(site_ids,org_id,api_url, api_key)
+
+        print(admin_score, failing_admins)
 
         logger.info(f"Pie chart data requested for org: {org_id}")
         #print(api_key)  
