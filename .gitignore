@@ -20,3 +20,5 @@ localhost.session.sql
 env.json
 encryption.key
 libs/
+plotly.js
+node_modules/
