@@ -450,13 +450,13 @@ const ChartManager = {
 
             
             // Log the detailed results for debugging
-            console.log('Security Audit Results:');
-            console.log('Admin Score:', response.admin_score);
-            console.log('Failing Admins:', response.failing_admins);
-            console.log('Site Firmware Score:', response.site_firmware_score);
-            console.log('Failing Firmware Sites:', response.site_firmware_failing);
-            console.log('Password Policy Score:', response.password_policy_score);
-            console.log('Password Policy Recommendations:', response.password_policy_recs);
+            //console.log('Security Audit Results:');
+            //console.log('Admin Score:', response.admin_score);
+            //console.log('Failing Admins:', response.failing_admins);
+            //console.log('Site Firmware Score:', response.site_firmware_score);
+            //console.log('Failing Firmware Sites:', response.site_firmware_failing);
+            //console.log('Password Policy Score:', response.password_policy_score);
+            //console.log('Password Policy Recommendations:', response.password_policy_recs);
             
         } catch (error) {
             console.error('Error rendering pie chart:', error);
