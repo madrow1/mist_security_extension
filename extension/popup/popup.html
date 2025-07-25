@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
     <head>
+        <script src="../plotly.js" charset="utf-8"></script>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="description" content="Mist Security Audit Tool - Browser Extension">
@@ -12,11 +13,12 @@
             }
 
             body {
+                width: auto; 
+                height: 200px; 
                 margin: 0;
-                font-family: 'Lato', Arial, sans-serif;
-                font-weight: 400;
-                width: 400px;
-                min-height: 300px;
+                padding: 0;
+                overflow: hidden; /* Initially no scrolling needed */
+                transition: all 0.3s ease-in-out; /* Smooth resize animation */
             }
 
             .banner {
@@ -29,6 +31,8 @@
                 padding: 8px 16px;
                 border-bottom: 2px solid #444;
                 height: 48px;
+                width: 100%;
+                flex-shrink: 0;
             }
 
             .banner-logo {
@@ -45,6 +49,18 @@
                 white-space: nowrap;
             }
 
+            body.chart-expanded .js-plotly-plot {
+                overflow: visible !important;
+            }
+
+            body.chart-expanded .plotly .legend {
+                overflow: visible !important;
+            }
+
+            body.chart-expanded .plotly .annotation {
+                overflow: visible !important;
+            }
+
             .header-content {
                 color: #003366;
                 text-align: center;
@@ -52,6 +68,24 @@
                 font-weight: 400;
                 margin: 16px 0;
                 padding: 0 15px;
+            }
+
+            body.chart-expanded {
+                width: 650px !important;
+                height: 520px !important;
+                overflow: auto;
+            }
+
+            body.chart-expanded .pie-chart {
+                display: block;
+                width: 620px;
+                height: 420px;
+                margin: 10px auto;
+            }
+    
+            body.chart-expanded #pie-chart {
+                width: 620px !important;
+                height: 420px !important;
             }
 
             .popup-content {
@@ -73,6 +107,19 @@
                 border-top: 1px solid #ccc;
                 background-color: #f7f7f7;
                 margin-top: 15px;
+            }
+
+            .js-plotly-plot {
+                overflow: visible !important;
+            }
+
+            /* Fix any potential clipping of labels */
+            .plotly .legend {
+                overflow: visible !important;
+            }
+
+            .plotly .annotation {
+                overflow: visible !important;
             }
 
             .action-button {
@@ -287,6 +334,12 @@
                 line-height: 1.5;
             }
 
+            main {
+                width: 100%;
+                padding: 10px;
+                box-sizing: border-box;
+            }
+
             #api-obscured {
                 font-weight: 300;
                 color: #444;
@@ -302,6 +355,8 @@
             .loading {
                 opacity: 0.6;
                 pointer-events: none;
+                text-align: center;
+                padding: 20px;
             }
                 
             .action-button {
@@ -315,8 +370,31 @@
             
             .popup-content {
                 padding: 10px;
+                min-height: 200px;
+                overflow: visible;
+                box-sizing: border-box;
+            }
+
+            .pie-chart {
+                width: auto; 
+                height: auto; 
+                margin: 0;
+                overflow: visible;
+                position: relative;
+                display: none;
+            }
+
+            #pie-chart {
+                width: 100%;
+                height: 100%;
+                min-width: 580px;
+                min-height: 400px;
             }
             
+            button, select {
+                font-size: 14px;
+                padding: 8px 12px;
+            }
 
         </style>
         <script src="popup.js" defer></script>
@@ -332,6 +410,8 @@
             
             <div class="popup-content" id="content-area" role="main" aria-live="polite">Select an action from the menu below to get started.</div>
             
+            <div id="pie-chart" class="pie-chart"></div>
+
             <div id="settings-menu" class="settings-menu" role="tabpanel" aria-labelledby="settings-btn">
                 <div class="settings-section">
                     <h3>API Configuration</h3>

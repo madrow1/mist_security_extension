@@ -10,7 +10,7 @@ from cryptography.fernet import Fernet
 import hashlib
 import secrets
 import requests
-from tests import check_admin
+from tests import check_admin, check_firmware, check_password_policy
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -140,18 +140,30 @@ def get_pie_chart():
             return jsonify({"error": "Failed to decrypt API key"}), 500
         
 
-        site_ids = [row[0] for row in site_id_sql]
+        site_ids = [row for row in site_id_sql]
 
         #print(site_ids)
         #print(api_url)
 
         admin_score, failing_admins = check_admin(site_ids,org_id,api_url, api_key)
+        site_firmware_score, site_firmware_failing = check_firmware(site_ids,org_id,api_url, api_key)
+        password_policy_score, password_policy_recs = check_password_policy(site_ids,org_id,api_url, api_key)
 
-        print(admin_score, failing_admins)
+        #print(admin_score, failing_admins)
+        #print(site_firmware_score, site_firmware_failing)
+        #print(password_policy_score, password_policy_recs)
 
         logger.info(f"Pie chart data requested for org: {org_id}")
         #print(api_key)  
-        return jsonify({"api_key": api_key, "status": "success"})
+        return jsonify({
+            "admin_score": admin_score,
+            "failing_admins": failing_admins,
+            "site_firmware_score": site_firmware_score,
+            "site_firmware_failing": site_firmware_failing,
+            "password_policy_score": password_policy_score,
+            "password_policy_recs": password_policy_recs
+        })
+    
     except Exception as e:
         logger.error(f"Error in pie-chart endpoint: {e}")
         return jsonify({"error": "Internal server error"}), 500
