@@ -98,10 +98,10 @@ function validateInput(action, request) {
             }
             break;
         case 'data':
-            if (!request.org_id || !request.site_id || !request.api_key) {
+            if (!request.org_id || !request.api_key) {
                 return 'Missing required fields';
             }
-            if (request.org_id.length !== 36 || request.site_id.length !== 36) {
+            if (request.org_id.length !== 36) {
                 return 'Invalid ID format';
             }
             if (request.api_key.length < 10) {
@@ -154,18 +154,24 @@ function buildApiRequest(action, request) {
         case 'data':
             endpoint = `${baseUrl}/data`;
             fetchOptions.method = 'POST';
+            fetchOptions.headers = { 'Content-Type': 'application/json' };
             fetchOptions.body = JSON.stringify({
                 org_id: request.org_id,
-                site_id: request.site_id,
-                api_key: request.api_key
+                api_key: request.api_key,
+                api_url: request.api_url
             });
             break;
         case 'purge-api-key':
             endpoint = `${baseUrl}/purge-api-key`;
             fetchOptions.method = 'POST';
+            fetchOptions.headers = { 'Content-Type': 'application/json' };
             fetchOptions.body = JSON.stringify({ 
                 org_id: request.org_id 
             });
+            break;
+        case 'get-site-id':
+            endpoint = `http://${CONFIG.apiAddress}:${CONFIG.apiPort}/api/get-site-id?org_id=${encodeURIComponent(request.org_id)}`;
+            fetchOptions.method = 'GET';
             break;
         default:
             throw new Error('Unknown action');

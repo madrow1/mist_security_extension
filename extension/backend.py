@@ -9,6 +9,7 @@ from mysql.connector import pooling
 from cryptography.fernet import Fernet
 import hashlib
 import secrets
+import requests
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -27,6 +28,7 @@ try:
         
     # Validate required configuration keys
     required_keys = ['host', 'user', 'password', 'database']
+    # keys missing will cause the program to terminate and a log to be created
     missing_keys = [key for key in required_keys if key not in config]
     if missing_keys:
         raise ValueError(f"Missing required configuration keys: {missing_keys}")
@@ -77,6 +79,7 @@ except Exception as e:
     logger.error(f"Failed to create database connection pool: {e}")
     exit(1)
 
+# Callable DB connection function for reuse.
 def get_db_connection():
     return connection_pool.get_connection()
 
@@ -86,6 +89,7 @@ def encrypt_api_key(api_key):
 def decrypt_api_key(encrypted_key):
     return cipher_suite.decrypt(encrypted_key.encode()).decode()
 
+# Validates the org_id using regex, not currently in use due to its occasionally returning errors. May use the UUID library for this eventually 
 def validate_org_id(org_id):
     if not org_id or len(org_id.strip()) != 36:
         return False
@@ -94,8 +98,9 @@ def validate_org_id(org_id):
     uuid_pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
     return bool(uuid_pattern.match(org_id.strip()))
 
+# Validates the API key, not currently in use because it was occasionally returning errors, needs further research. 
 def validate_api_key(api_key):
-    if not api_key or len(api_key.strip()) < 10:
+    if not api_key or len(api_key.strip()) < 36:
         return False
     return True
 
@@ -107,15 +112,27 @@ def get_pie_chart():
             return jsonify({"error": "Invalid organization ID"}), 400
 
         db_connection = get_db_connection()
+        cursor = db_connection.cursor()
 
-        sample_data = {
-            "labels": ["Secure Devices", "Vulnerable Devices", "Unknown Status"],
-            "values": [65, 25, 10],
-            "colors": ["#4CAF50", "#FF5722", "#FF9800"]
-        }
-        
+        # Retrieve the encrypted API key for the org_id
+        cursor.execute("SELECT api_key FROM customer_data WHERE org_id = %s", (org_id,))
+        result = cursor.fetchone()
+        cursor.close()
+        db_connection.close()
+
+        if not result:
+            return jsonify({"error": "API key not found for this organization"}), 404
+
+        encrypted_api_key = result[0]
+        try:
+            api_key = decrypt_api_key(encrypted_api_key)
+        except Exception as e:
+            logger.error(f"Error decrypting API key: {e}")
+            return jsonify({"error": "Failed to decrypt API key"}), 500
+
         logger.info(f"Pie chart data requested for org: {org_id}")
-        return jsonify({"data": sample_data, "status": "success"})
+        #print(api_key)  
+        return jsonify({"api_key": api_key, "status": "success"})
     except Exception as e:
         logger.error(f"Error in pie-chart endpoint: {e}")
         return jsonify({"error": "Internal server error"}), 500
@@ -189,13 +206,17 @@ def get_ap_list():
         logger.error(f"Error in ap-list endpoint: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
+# This route is only activated if the user clicks on settings. Ideally it would only be activated once. It validates whether or not an org_id string exists in the database already.
+# If the org_id exists then no need for a new API key, else we need an API key to work
 @app.route('/api/check-existing-data', methods=['GET'])
 def check_existing_data():
     org_id = request.args.get('org_id')
     
+    # If no org_id is returned with the API call then this will result in an error being returned. 
     if not org_id:
         return jsonify({"error": "Missing org_id parameter"}), 400
     
+    # This function is not currently in use. It should call the validate_org_id function and check that the org_id matches regex
     if not validate_org_id(org_id):
         return jsonify({"error": "Invalid organization ID format"}), 400
 
@@ -205,16 +226,21 @@ def check_existing_data():
         db_connector = get_db_connection()
         cursor = db_connector.cursor()
         
+        # Build the query string to send to the mariaDB backend, this is checking whether or not more than 1 instance of the org_id is already in the database
+        # if the ID already exists then it is assumed that the org will not require another API key, and the API input option will be disabled.
+        # Future TODO is to add the option for customers to provide their own database credentials and store everything locally.
         sql = "SELECT COUNT(*) FROM customer_data WHERE org_id = %s"
         cursor.execute(sql, (org_id,))
         (count,) = cursor.fetchone()
         
+        # Returns a console log which can then be used for debugging.
         logger.info(f"Data check for org_id: {org_id}, found: {count}")
+        # Correct responses here are 0 and 1, anything greater than 1 and something has gone very wrong somewhere.
         return jsonify({"exists": count > 0})
         
     except Exception as e:
         logger.error(f"Error checking existing data: {e}")
-        return jsonify({"error": "Database error"}), 500
+        return jsonify({"error": "Database error <- likely the Flask server is not running or the query string is malformed."}), 500
     finally:
         if db_connector:
             if 'cursor' in locals():
@@ -232,45 +258,80 @@ def get_settings():
 @app.route('/api/data', methods=['POST'])
 def insert_customer_data():
     db_connector = None
-    
+    # Initialise a list to containt the site_ids 
+    site_ids = []
     try:
+        # intialise the data variable to receive json data from the front end
         data = request.get_json()
-        
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
-            
+
+        #print(data)
+
+        # These are the expected data types being returned from the front end
         org_id = data.get('org_id', '').strip()
-        site_id = data.get('site_id', '').strip()
         api_key = data.get('api_key', '').strip()
+        api_url = data.get('api_url', '').strip()
 
-        # Validate input
-        if not org_id or not site_id or not api_key:
-            return jsonify({"error": "Missing required fields: org_id, site_id, or api_key"}), 400
-            
-        if not validate_org_id(org_id):
-            return jsonify({"error": "Invalid organization ID format"}), 400
-            
-        if not validate_api_key(api_key):
-            return jsonify({"error": "Invalid API key format"}), 400
-
-        # Encrypt the API key
-        encrypted_api_key = encrypt_api_key(api_key)
+        # If any of the above are missing then return an error.
+        if not org_id or not api_url or not api_key:
+            return jsonify({"error": "Missing required fields: org_id or api_key"}), 400
         
+        # These checks were returning errors TODO is fix that 
+        #if not validate_org_id(org_id):
+            #return jsonify({"error": "Invalid organization ID format"}), 400
+        #if not validate_api_key(api_key):
+        #    return jsonify({"error": "Invalid API key format"}), 400
+
+        #print(api_url)
+
+
+        headers = {'Content-Type': 'application/json', 'Authorization': f'Token {api_key}'}
+        
+        #print(f"https://{api_url}/api/v1/orgs/{org_id}/sites", headers)
+        
+        response = requests.get(f"https://{api_url}/api/v1/orgs/{org_id}/sites", headers=headers)
+
+        # The response containing anything but a 200 is considered a fail
+        if response.status_code != 200:
+            return jsonify({"error": "Failed to authenticate API key <- This error is as a result of a failed GET"}), 401
+
+        #print(response.json())
+
+        # save the response to a variable for no particular reason
+        data = response.json()
+
+        # Iterate over the contents of the data variable. Since it should return a JSON array containing JSON objects we should then get as many outputs as their are sites in the org
+        for site in data:
+            # Strip out the 'id' field from each object
+            site_id = site.get('id')
+            if site_id:
+                logger.info(f"site_id: {site_id} added")
+                # site_ids are then appended to the site_id list for later use
+                site_ids.append(site_id)
+
+        encrypted_api_key = encrypt_api_key(api_key)
+
         db_connector = get_db_connection()
         cursor = db_connector.cursor()
 
-        # Check if org_id already exists
-        check_sql = "SELECT COUNT(*) FROM customer_data WHERE org_id = %s"
-        cursor.execute(check_sql, (org_id,))
-        (existing_count,) = cursor.fetchone()
-        
-        if existing_count > 0:
-            return jsonify({"error": "Organization ID already exists"}), 409
+        cursor.execute(
+            "INSERT INTO customer_data (org_id, api_url, api_key) VALUES (%s, %s, %s)",
+            (org_id, api_url, encrypted_api_key)
+        )
 
-        # Insert new record
-        sql = "INSERT INTO customer_data (org_id, site_id, api_key) VALUES (%s, %s, %s)"
-        cursor.execute(sql, (org_id, site_id, encrypted_api_key))
-        
+
+        for site_id in site_ids:
+            cursor.execute(
+                """
+                INSERT INTO customer_sites (org_id, site_id, score_1, score_2, score_3, score_4)
+                VALUES (%s, %s, 0, 0, 0, 0)
+                """,
+                (org_id, site_id)
+            )
+
+        db_connector.commit()
+
         logger.info(f"Data inserted successfully for org_id: {org_id}")
         return jsonify({"success": True, "message": "Data inserted successfully"})
 
@@ -285,6 +346,7 @@ def insert_customer_data():
             if 'cursor' in locals():
                 cursor.close()
             db_connector.close()
+
 
 @app.route('/api/purge-api-key', methods=['POST'])
 def purge_api_key():
@@ -334,6 +396,55 @@ def purge_api_key():
                 cursor.close()
             db_connector.close()
 
+@app.route('/api/get-site-id', methods = ['GET'])
+def get_site_id():
+    db_connector = None
+    try: 
+
+        org_id = request.args.get('org_id', '').strip()
+
+        print(org_id)
+
+        db_connector = get_db_connection()
+        cursor = db_connector.cursor()
+
+        sql = 'SELECT site_id FROM customer_sites WHERE org_id = %s'
+        cursor.execute(sql, (org_id,))
+
+        results = cursor.fetchall()
+
+        print(results)
+
+        if not results:
+            return jsonify({
+                "success": True,
+                "org_id": org_id,
+                "site_ids": [],
+                "message": "No sites found for this organization"
+            })
+        
+        # Extract site_ids from results
+        site_ids = [row[0] for row in results]
+
+        return jsonify({
+            "success": True,
+            "org_id": org_id,
+            "site_ids": site_ids,
+            "count": len(site_ids)
+        })
+
+    except mysql.connector.Error as e:
+        logger.error(f"Database error in get-site-id: {e}")
+        return jsonify({"error": "Database error"}), 500
+    except Exception as e:
+        logger.error(f"Error in get-site-id: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+    finally:
+        if db_connector:
+            if 'cursor' in locals():
+                cursor.close()
+            db_connector.close()
+    
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({"error": "Endpoint not found"}), 404

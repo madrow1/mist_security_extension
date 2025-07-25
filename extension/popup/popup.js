@@ -9,7 +9,7 @@ const AppState = {
 // DOM elements cache
 const DOMElements = {};
 
-// URL parsing utilities, these do not fully work, the site ID and the org ID are often returned the same, may be more effective to retrieve these from the API once the api key is known
+// URL parsing utilities
 const URLUtils = {
     extractOrgId(url) {
         const match = url.match(/[?&]org_id=([0-9a-fA-F-]{36})/);
@@ -17,8 +17,7 @@ const URLUtils = {
     },
 
     extractSiteId(url) {
-        // Match the last UUID (site ID) after a slash
-        const match = url.match(/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:$|[^\w-])/);
+        const match = url.match(/[?&]site_id=([0-9a-fA-F-]{36})/);
         return match ? match[1] : null;
     },
 
@@ -36,6 +35,7 @@ const URLUtils = {
 
 // UI utilities, these just make things look nicer
 const UIUtils = {
+    // Dims the element 
     showLoading(element, text = 'Loading...') {
         if (element) {
             element.textContent = text;
@@ -43,12 +43,14 @@ const UIUtils = {
         }
     },
 
+    // Restores the elements opacity 
     hideLoading(element) {
         if (element) {
             element.style.opacity = '1';
         }
     },
 
+    // Displays error messages in red 
     showError(element, message) {
         if (element) {
             element.textContent = `Error: ${message}`;
@@ -56,6 +58,7 @@ const UIUtils = {
         }
     },
 
+    // Displays success messages in green
     showSuccess(element, message) {
         if (element) {
             element.textContent = message;
@@ -63,12 +66,14 @@ const UIUtils = {
         }
     },
 
+    // Resets buttons to their default state
     resetButtonStates() {
         document.querySelectorAll('.action-button').forEach(btn => {
             btn.classList.remove('clicked');
         });
     },
 
+    // Sets the selected button to be "clicked"
     setButtonClicked(button) {
         this.resetButtonStates();
         button.classList.add('clicked');
@@ -87,10 +92,16 @@ const ValidationUtils = {
         // validates api key, if it is not apiKey and not a string then false is returned/ 
         if (!apiKey || typeof apiKey !== 'string') return false;
         return apiKey.trim().length >= 36;
+    },
+
+    isValidSiteId(siteId) {
+        if (!siteId || typeof siteId !== 'string') return false;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(siteId.trim());
     }
 };
 
-// API communication
+// API communication, ues the Chrome extension messaging API to commucate with the backgroun script
 const APIClient = {
     sendMessage(action, data = {}) {
         return new Promise((resolve, reject) => {
@@ -114,6 +125,7 @@ const APIClient = {
 
 // Settings management
 const SettingsManager = {
+    // cChecks whether the API key exists for the current org_id
     async checkExistingData(orgId) {
         try {
             const response = await APIClient.sendMessage('check-existing-data', { org_id: orgId });
@@ -124,7 +136,20 @@ const SettingsManager = {
         }
     },
 
-    async submitApiKey(orgId, siteId, apiKey) {
+    // Get site IDs for the organization from database
+    async getSiteIds(orgId) {
+        try {
+            const response = await APIClient.sendMessage('get-site-id', { org_id: orgId });
+            console.log(response.siteIds)
+            return response.site_ids || [];
+        } catch (error) {
+            console.error('Error getting site IDs:', error);
+            return [];
+        }
+    },
+
+    // Submits API key data for a specific org and 
+    async submitApiKey(orgId, apiKey, apiAddress) {
         if (!ValidationUtils.isValidOrgId(orgId)) {
             throw new Error('Invalid organization ID');
         }
@@ -136,8 +161,8 @@ const SettingsManager = {
         try {
             await APIClient.sendMessage('data', {
                 org_id: orgId,
-                site_id: siteId,
-                api_key: apiKey
+                api_key: apiKey,
+                api_url: apiAddress
             });
         } catch (error) {
             console.error('Error submitting API key:', error);
@@ -207,6 +232,56 @@ const SettingsManager = {
     }
 };
 
+// Site management
+const SiteManager = {
+    async updateSiteInfo(orgId, urlSiteId) {
+        const { siteidElem } = DOMElements;
+        
+        if (!siteidElem) return;
+
+        try {
+            // If there's a site_id in the URL, use it
+            if (urlSiteId && ValidationUtils.isValidSiteId(urlSiteId)) {
+                siteidElem.textContent = urlSiteId;
+                siteidElem.style.color = '#2e7d32'; // Green for URL-detected site
+                AppState.site_id = urlSiteId;
+                return;
+            }
+
+            // If no site_id in URL but we have org_id, try to get sites from database
+            if (orgId && ValidationUtils.isValidOrgId(orgId)) {
+                const siteIds = await SettingsManager.getSiteIds(orgId);
+
+                if (siteIds.length > 0) {
+                    if (siteIds.length === 1) {
+                        siteidElem.textContent = siteIds[0];
+                        AppState.site_id = siteIds[0];
+                    } else {
+                        // Join all site_ids with new lines or commas
+                        siteidElem.innerHTML = siteIds.map(id => `<div>${id}</div>`).join('');
+                        AppState.site_id = null;
+                    }
+                    siteidElem.style.color = '#666';
+
+                } else {
+                    siteidElem.textContent = 'No sites found';
+                    siteidElem.style.color = '#d32f2f'; // Red for no sites
+                    AppState.site_id = null;
+                }
+            } else {
+                siteidElem.textContent = 'Null';
+                siteidElem.style.color = '#999'; // Gray for null
+                AppState.site_id = null;
+            }
+        } catch (error) {
+            console.error('Error updating site info:', error);
+            siteidElem.textContent = 'Error loading sites';
+            siteidElem.style.color = '#d32f2f';
+            AppState.site_id = null;
+        }
+    }
+};
+
 // Tab management
 const TabManager = {
     async getCurrentTab() {
@@ -228,15 +303,17 @@ const TabManager = {
 
             AppState.currentTab = tab;
             AppState.org_id = URLUtils.extractOrgId(fullURL);
-            AppState.site_id = URLUtils.extractSiteId(fullURL);
+            const urlSiteId = URLUtils.extractSiteId(fullURL);
 
             const apiUrl = URLUtils.getApiUrl(hostname);
 
             // Update UI elements
-            const { apiURLElem, orgidElem, siteidElem } = DOMElements;
+            const { apiURLElem, orgidElem } = DOMElements;
             if (apiURLElem) apiURLElem.textContent = apiUrl;
             if (orgidElem) orgidElem.textContent = AppState.org_id || 'Not detected';
-            if (siteidElem) siteidElem.textContent = AppState.site_id || 'Not detected';
+
+            // Update site information
+            await SiteManager.updateSiteInfo(AppState.org_id, urlSiteId);
 
         } catch (error) {
             console.error('Error updating tab info:', error);
@@ -259,6 +336,12 @@ const ActionHandlers = {
 
             // Add org_id to the request for data endpoints
             const requestData = action === 'settings' ? {} : { org_id: AppState.org_id };
+            
+            // Add site_id if available for certain actions
+            if (AppState.site_id && ['switches', 'aps'].includes(action)) {
+                requestData.site_id = AppState.site_id;
+            }
+            
             const response = await APIClient.sendMessage(action, requestData);
 
             if (popupContent) {
@@ -312,17 +395,26 @@ const ActionHandlers = {
         }
 
         if (!ValidationUtils.isValidApiKey(apiKey)) {
-            alert('API key must be at least 10 characters long');
+            alert('API key must be at least 36 characters long');
             return;
         }
 
-        if (!AppState.org_id || !AppState.site_id) {
-            alert('Organization ID or Site ID not detected');
+        await TabManager.updateTabInfo();
+
+        if (!AppState.org_id || !AppState.currentTab?.url) {
+            alert('Organization ID or URL not detected');
             return;
         }
+
+        const url = new URL(AppState.currentTab.url);
+        const apiUrl = URLUtils.getApiUrl(url.hostname);
+
+        console.log('AppState.currentTab.url:', AppState.currentTab?.url);
+        console.log('Parsed hostname:', url.hostname);
+        console.log('apiUrl:', apiUrl);
 
         try {
-            await SettingsManager.submitApiKey(AppState.org_id, AppState.site_id, apiKey);
+            await SettingsManager.submitApiKey(AppState.org_id, apiKey, apiUrl);
 
             // Update UI to show success
             const obscuredKey = SettingsManager.obscureApiKey(apiKey);
@@ -332,6 +424,9 @@ const ActionHandlers = {
             }
 
             SettingsManager.showMessage('API key saved successfully', 'success');
+
+            // Refresh site information after API key is saved
+            await SiteManager.updateSiteInfo(AppState.org_id, null);
 
         } catch (error) {
             alert('Error saving API key: ' + error.message);
@@ -373,6 +468,9 @@ const ActionHandlers = {
             // Check existing data after successful purge
             const exists = await SettingsManager.checkExistingData(AppState.org_id);
             SettingsManager.updateSettingsUI(exists);
+
+            // Update site information after purging
+            await SiteManager.updateSiteInfo(AppState.org_id, null);
 
         } catch (error) {
             alert('Error purging API key: ' + error.message);
