@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="en">
     <head>
-        <script src="../plotly.js" charset="utf-8"></script>
+        <script src="../libs/chart.min.js"></script>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="description" content="Mist Security Audit Tool - Browser Extension">
         <link rel="icon" type="image/x-icon" href="favicon.ico">
         <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="popup.css" ></link>
+        <link rel="stylesheet" href="popup.css" >
         <script src="popup.js" defer></script>
     </head>
     <body>
@@ -19,9 +19,14 @@
         <main>
             <h1 class="header-content">Mist Security Audit Tool</h1>
             
-            <div class="popup-content" id="content-area" role="main" aria-live="polite">Select an action from the menu below to get started.</div>
+            <div class="popup-content" id="content-area" aria-live="polite">Select an action from the menu below to get started.</div>
             
-            <div id="pie-chart" class="pie-chart"></div>
+            <div id="pie-chart">
+                <canvas id="chart-inner"></canvas>
+                <noscript>
+                    <p class="message error">JavaScript is required to view security metrics charts.</p>
+                </noscript>
+            </div>
 
             <div id="settings-menu" class="settings-menu" role="tabpanel" aria-labelledby="settings-btn">
                 <div class="settings-section">
@@ -99,7 +104,6 @@
             <button id="settings-btn" class="action-button" data-action="settings" type="button" title="Configure API settings">
                 Settings
             </button>
-            <button class="action-button" data-action="clear-cache">Clear Cache</button>
         </nav>
     </body>
 </html>

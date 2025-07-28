@@ -18,15 +18,8 @@ const URLUtils = {
         return match ? match[1] : null;
     },
 
-    //matches "manage" in the URL bar and replaces it with "api" to get the local API URL
     getApiUrl(hostname) {
-        if (/^manage\./.test(hostname)) {
-            return hostname.replace(/^manage\./, 'api.');
-        } else if (/^integration\./.test(hostname)) {
-            return hostname.replace(/^integration\./, 'api.');
-        }
-        // if no URL can be found then it will default to api.mist.com
-        return 'api.mist.com';
+        return hostname.replace(/^(manage|integration)\./, 'api.') || 'api.mist.com';
     }
 };
 
@@ -79,22 +72,21 @@ const UIUtils = {
 
 // Validation utilities to validate the org ID and API key.
 const ValidationUtils = {
-    isValidOrgId(orgId) {
-        if (!orgId || typeof orgId !== 'string') return false;
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        return uuidRegex.test(orgId.trim());
-    },
-
-    isValidApiKey(apiKey) {
-        // validates api key, if it is not apiKey and not a string then false is returned/ 
-        if (!apiKey || typeof apiKey !== 'string') return false;
-        return apiKey.trim().length >= 36;
-    },
-
-    isValidSiteId(siteId) {
-        if (!siteId || typeof siteId !== 'string') return false;
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        return uuidRegex.test(siteId.trim());
+    UUID_REGEX: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    
+    validate(value, type) {
+        if (!value || typeof value !== 'string') return false;
+        value = value.trim();
+        
+        switch (type) {
+            case 'orgId':
+            case 'siteId':
+                return this.UUID_REGEX.test(value);
+            case 'apiKey':
+                return value.length >= 36;
+            default:
+                return false;
+        }
     }
 };
 
@@ -147,11 +139,11 @@ const SettingsManager = {
 
     // Submits API key data for a specific org and 
     async submitApiKey(orgId, apiKey, apiAddress) {
-        if (!ValidationUtils.isValidOrgId(orgId)) {
+        if (!ValidationUtils.validate(orgId, 'orgId')) {
             throw new Error('Invalid organization ID');
         }
 
-        if (!ValidationUtils.isValidApiKey(apiKey)) {
+        if (!ValidationUtils.validate(apiKey, 'apiKey')) {
             throw new Error('API key must be at least 36 characters long');
         }
 
@@ -168,7 +160,7 @@ const SettingsManager = {
     },
 
     async purgeApiKey(orgId) {
-        if (!ValidationUtils.isValidOrgId(orgId)) {
+        if (!ValidationUtils.validate(orgId, 'orgId')) {
             throw new Error('Invalid organization ID');
         }
 
@@ -238,7 +230,7 @@ const SiteManager = {
 
         try {
             // If there's a site_id in the URL, use it
-            if (urlSiteId && ValidationUtils.isValidSiteId(urlSiteId)) {
+            if (urlSiteId && ValidationUtils.validate(urlSiteId, 'siteId')) {
                 siteidElem.textContent = urlSiteId;
                 siteidElem.style.color = '#2e7d32'; // Green for URL-detected site
                 AppState.site_id = urlSiteId;
@@ -246,7 +238,7 @@ const SiteManager = {
             }
 
             // If no site_id in URL but we have org_id, try to get sites from database
-            if (orgId && ValidationUtils.isValidOrgId(orgId)) {
+            if (orgId && ValidationUtils.validate(orgId, 'orgId')) {
                 const siteIds = await SettingsManager.getSiteIds(orgId);
 
                 if (siteIds.length > 0) {
@@ -318,150 +310,49 @@ const TabManager = {
     }
 };
 
-// Enhanced ChartManager without cached data support
 const ChartManager = {
-    async handlePieChart() {
-        const popupContent = document.getElementById('content-area');
-        const pieChartContainer = document.getElementById('pie-chart');
+    // Chart instance reference for cleanup
+    chartInstance: null,
+    
+    // Process issue data for tooltips
+    processIssues(issues) {
+        if (!issues) return 'No issues';
         
-        if (!AppState.org_id) {
-            UIUtils.showError(popupContent, 'Organization ID not detected. Please navigate to a Mist organization page.');
-            return;
+        // Handle array format
+        if (Array.isArray(issues)) {
+            return issues.length > 0 ? issues.join('\n') : 'No issues';
         }
-        this.fetchAndShowChart();
-    },
-
-    async fetchAndShowChart() {
-        const popupContent = document.getElementById('content-area');
-
-        try {
-            // Hide settings menu and show loading
-            if (DOMElements.settingsMenu) {
-                DOMElements.settingsMenu.style.display = 'none';
-            }
+        
+        // Handle object format
+        if (typeof issues === 'object') {
+            const entries = Object.entries(issues);
+            if (entries.length === 0) return 'No issues';
             
-            if (popupContent) {
-                popupContent.textContent = '';
-                popupContent.style.color = '';
-            }
-            
-            const pieChartContainer = document.getElementById('pie-chart');
-            if (pieChartContainer) {
-                pieChartContainer.innerHTML = '';
-            }
-            
-            UIUtils.showLoading(popupContent, 'Loading security audit data...');
-
-            // Get the pie chart data from the API
-            const response = await APIClient.sendMessage('pie', { org_id: AppState.org_id });
-            
-            if (!response || typeof response.admin_score === 'undefined') {
-                throw new Error('Invalid data received from API');
-            }
-
-            // Show the chart
-            await this.showChart(response, false);
-            
-        } catch (error) {
-            console.error('Error rendering pie chart:', error);
-            this.hideChart();
-            UIUtils.showError(popupContent, `Failed to load pie chart: ${error.message}`);
-        }
-    },
-
-    async showChart(data, isCached = false) {
-        const popupContent = document.getElementById('content-area');
-        const pieChartContainer = document.getElementById('pie-chart');
-
-        UIUtils.hideLoading(popupContent);
-        document.body.classList.add('chart-expanded');
-        pieChartContainer.classList.add('visible');
-
-        await new Promise(resolve => setTimeout(resolve, 50));
-        if (popupContent) {
-            popupContent.style.display = 'none';
-        }
-
-        const chartDiv = document.createElement('div');
-        chartDiv.id = 'chart-inner';
-        pieChartContainer.appendChild(chartDiv);
-        pieChartContainer.style.display = 'block';
-
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        const pieValues = [{
-            values: [data.admin_score, data.site_firmware_score, data.password_policy_score],
-            labels: ["Admin Score", "Auto-firmware Upgrade Score", "Password Policy Score"],
-            name: 'Mist Security Score',
-            hole: 0.4,
-            type: 'pie',
-            textinfo: 'label+value',
-            pull: [0,0,0],
-            textposition: 'outside',
-            showlegend: false, 
-            marker: {
-                colors: ['#FF6B6B', '#4ECDC4', '#45B7D1'],
-                line: {
-                    color: '#FFFFFF',
-                    width: 3
+            return entries.map(([key, value]) => {
+                // If value is an array, join its elements
+                if (Array.isArray(value)) {
+                    return `${key}: ${value.join(', ')}`;
                 }
-            },
-            hovertemplate: '<b>%{label}</b><br>Score: %{value}<br>Percentage: %{percent}<extra></extra>'
-        }];
+                // Otherwise, just use the value directly
+                return `${key}: ${value}`;
+            }).join('\n');
+        }
+        
+        // Handle string or other format
+        return String(issues) || 'No issues';
+    },
 
-        const layout = {
-            title: {
-                text: `Mist Security Audit Scores`,
-                font: { size: 16 },
-                x: 0.5,
-                xanchor: 'center'
-            },
-            height: 400,
-            width: 600,
-            margin: { 
-                t: 50,
-                b: 30,
-                l: 30,
-                r: 120
-            },
-            paper_bgcolor: 'rgba(0,0,0,0)',
-            plot_bgcolor: 'rgba(0,0,0,0)',
-            autosize: false
-        };
-
-        const config = {
-            responsive: false,
-            displayModeBar: false,
-            displaylogo: false,
-            staticPlot: false
-        };
-
-        const segmentCount = pieValues[0].values.length;
-        const chartId = 'chart-inner';
-
-        if (typeof Plotly !== 'undefined') {
-            await Plotly.newPlot('chart-inner', pieValues, layout, config);
-            const chartEl = document.getElementById('chart-inner');
-
-            chartEl.on('plotly_hover', function(data) {
-                const update = {
-                    'pull': pieValues[0].values.map((_, i) => i === data.points[0].pointNumber ? 0.1 : 0)
-                };
-                Plotly.restyle(chartId, update, [0]);
-            });
-
-            chartEl.on('plotly_unhover', function() {
-                const update = {
-                    'pull': Array(segmentCount).fill(0)
-                };
-                Plotly.restyle(chartId, update, [0]);
-            }); 
-
-        } else {
-            throw new Error('Plotly library not loaded');
+    // Handle pie chart click - show details
+    handleChartClick(event, chartElements) {
+        if (chartElements.length > 0) {
+            const index = chartElements[0].index;
+            // Display detailed information based on segment clicked
+            alert(`You clicked on segment ${index + 1}`);
+            // You can implement more sophisticated UI here
         }
     },
     
+    // Hide chart and clean up
     hideChart() {
         const popupContent = document.getElementById('content-area');
         const pieChartContainer = document.getElementById('pie-chart');
@@ -469,17 +360,150 @@ const ChartManager = {
         document.body.classList.remove('chart-expanded');
         
         if (pieChartContainer) {
-            pieChartContainer.classList.remove('visible');
             pieChartContainer.style.display = 'none';
-            pieChartContainer.innerHTML = '';
+            
+            // Destroy the chart instance if it exists
+            if (this.chartInstance) {
+                this.chartInstance.destroy();
+                this.chartInstance = null;
+            }
         }
         
-        setTimeout(() => {
-            if (popupContent) {
-                popupContent.style.display = 'block';
-                popupContent.textContent = 'Select an action from the menu below to get started.';
+        if (popupContent) {
+            popupContent.style.display = 'block';
+        }
+    },
+
+    hideSettings() {
+            const settingsMenuDOM = document.getElementById('settings-menu');
+
+        document.body.classList.remove('settings-menu');
+        
+        if (settingsMenuDOM) {
+            settingsMenuDOM.style.display = 'none';
             }
-        }, 100);
+    },
+    
+    // Main method to show chart
+    async showChart(data, isCached = false) {
+        try {
+            // First make the container visible
+            const pieChartContainer = document.getElementById('pie-chart');
+            const popupContent = document.getElementById('content-area');
+            
+            // Hide content and show chart container with specific dimensions
+            if (popupContent) {
+                popupContent.style.display = 'none';
+            }
+            
+            if (pieChartContainer) {
+                pieChartContainer.style.display = 'block';
+                pieChartContainer.style.width = '800px';
+                pieChartContainer.style.height = '600px';
+                pieChartContainer.style.margin = '0 auto'; // Center it
+            }
+            
+            // Expand the body
+            document.body.classList.add('chart-expanded');
+            
+            // Force layout recalculation
+            void pieChartContainer.offsetHeight;
+            
+            // Clear and create a fresh canvas
+            pieChartContainer.innerHTML = '<canvas id="chart-inner"></canvas>';
+            
+            // Get the canvas and set explicit dimensions
+            const chartCanvas = document.getElementById('chart-inner');
+            chartCanvas.style.width = '100%';
+            chartCanvas.style.height = '100%';
+            
+            // Give the browser a moment to process the DOM changes
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Now set the canvas dimensions after the container is properly sized
+            chartCanvas.width = pieChartContainer.clientWidth || 800;
+            chartCanvas.height = pieChartContainer.clientHeight || 600;
+            
+            // Get the context
+            const ctx = chartCanvas.getContext('2d');
+            if (!ctx) {
+                console.error("Failed to get canvas context");
+                return;
+            }
+
+            // Create chart with better sizing options
+            this.chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ["Admin Score", "Auto-firmware Score", "Password Score"],
+                    datasets: [{
+                        data: [data.admin_score, data.site_firmware_score, data.password_policy_score],
+                        backgroundColor: ['#2D6A00', '#84B135', '#0095A9'],
+                        cutout: '40%',
+                        borderWidth: 3,
+                        hoverOffset: 15, // Increased from 5 for better visibility
+                        spacing: 1                   
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'right',
+                        labels: {
+                            font: {
+                                size: 14 // Larger font for better readability
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Security Audit Scores',
+                        font: {
+                            size: 18
+                        }
+                    }
+                }
+            }
+        }
+    );
+            
+            console.log("Chart created successfully with dimensions:", {
+                containerWidth: pieChartContainer.clientWidth,
+                containerHeight: pieChartContainer.clientHeight,
+                canvasWidth: chartCanvas.width,
+                canvasHeight: chartCanvas.height
+            });
+        } catch (error) {
+            console.error("Chart creation error:", error);
+            alert(`Chart creation failed: ${error.message}`);
+        }
+    },
+    
+    // Fetch and show chart data
+    async handlePieChart() {
+        if (!AppState.org_id) {
+            alert('Organization ID not detected. Please navigate to a Mist organization page.');
+            return;
+        }
+
+        try {
+            UIUtils.showLoading(document.getElementById('content-area'));
+            const response = await APIClient.sendMessage('pie', { org_id: AppState.org_id });
+
+            if (response) {
+                await this.showChart(response);
+            } else {
+                alert(`Error loading chart data: No data returned`);
+                UIUtils.hideLoading(document.getElementById('content-area'));
+            }
+        } catch (error) {
+            console.error('Error handling pie chart:', error);
+            alert(`Error: ${error.message}`);
+            UIUtils.hideLoading(document.getElementById('content-area'));
+        }
     }
 };
 
@@ -530,7 +554,7 @@ const ActionHandlers = {
 
         await TabManager.updateTabInfo();
 
-        if (AppState.org_id && ValidationUtils.isValidOrgId(AppState.org_id)) {
+        if (AppState.org_id && ValidationUtils.validate(AppState.org_id, 'orgId')) {
             try {
                 const exists = await SettingsManager.checkExistingData(AppState.org_id);
                 SettingsManager.updateSettingsUI(exists);
@@ -555,7 +579,7 @@ const ActionHandlers = {
             return;
         }
 
-        if (!ValidationUtils.isValidApiKey(apiKey)) {
+        if (!ValidationUtils.validate(apiKey, 'apiKey')) {
             alert('API key must be at least 36 characters long');
             return;
         }
@@ -688,21 +712,23 @@ function setupEventListeners() {
                 ChartManager.hideChart()
                 await ActionHandlers.handleSettingsAction();
             } else if (action === 'pie') {
-                // Handle pie chart specifically with caching support
                 await ChartManager.handlePieChart();
             //} else if (action === 'export-data') {
                 // Handle data export
             //    await ActionHandlers.handleDataExport();
             } else if (action === 'histogram') {
                 ChartManager.hideChart()
+                ChartManager.hideSettings()
                 // Handle pie chart specifically with caching support
                 //await ChartManager.handlePieChart();
             } else if (action === 'switches') {
                 ChartManager.hideChart()
+                ChartManager.hideSettings()
                 // Handle pie chart specifically with caching support
                 //await ChartManager.handlePieChart();
             } else if (action === 'aps') {
                 ChartManager.hideChart()
+                ChartManager.hideSettings()
                 // Handle pie chart specifically with caching support
                 //await ChartManager.handlePieChart();
             } else {
@@ -747,7 +773,16 @@ function debug(message, data) {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
+    // First thing - check if Chart.js is loaded
+    console.log("DOM loaded, Chart.js available:", typeof Chart !== 'undefined');
+    console.log("Chart version:", Chart?.version || "not loaded");
+    
     setupEventListeners();
+    
+    // Cache frequently used elements
+    const chartEl = document.getElementById('chart-inner');
+    const popupContent = document.getElementById('content-area');
+    const pieChartContainer = document.getElementById('pie-chart');
 
     // Initialize tab info
     TabManager.updateTabInfo().catch(error => {
@@ -757,3 +792,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Update data status on popup load
     await ActionHandlers.updateDataStatus();
 });
+
+// Error handling function
+function handleError(context, error, element = null) {
+    console.error(`Error in ${context}:`, error);
+    if (element) UIUtils.showError(element, error.message);
+    return error;
+}
+

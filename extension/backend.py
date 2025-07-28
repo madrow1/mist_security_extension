@@ -11,6 +11,7 @@ import hashlib
 import secrets
 import requests
 from tests import check_admin, check_firmware, check_password_policy
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -91,13 +92,14 @@ def decrypt_api_key(encrypted_key):
     return cipher_suite.decrypt(encrypted_key.encode()).decode()
 
 # Validates the org_id using regex, not currently in use due to its occasionally returning errors. May use the UUID library for this eventually 
+import re
+# Define regex pattern once at module level
+UUID_PATTERN = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
+
 def validate_org_id(org_id):
     if not org_id or len(org_id.strip()) != 36:
         return False
-    # Check UUID format (basic validation)
-    import re
-    uuid_pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
-    return bool(uuid_pattern.match(org_id.strip()))
+    return bool(UUID_PATTERN.match(org_id.strip()))
 
 # Validates the API key, not currently in use because it was occasionally returning errors, needs further research. 
 def validate_api_key(api_key):
@@ -112,23 +114,17 @@ def get_pie_chart():
         if not org_id or not validate_org_id(org_id):
             return jsonify({"error": "Invalid organization ID"}), 400
 
-        db_connection = get_db_connection()
-        cursor = db_connection.cursor()
-        cursor2 = db_connection.cursor()
-
-        # Retrieve the encrypted API key for the org_id
-        cursor.execute("SELECT api_key, api_url FROM customer_data WHERE org_id = %s", (org_id,))
-        result = cursor.fetchone()
-
-        cursor2.execute("SELECT site_id FROM customer_sites WHERE org_id = %s", (org_id,))
-        site_id_sql= cursor2.fetchall()
-
-        cursor2.close()
-        cursor.close()
-        db_connection.close()
-
-        if not result:
-            return jsonify({"error": "API key not found for this organization"}), 404
+        # Get data and site IDs in one database connection
+        with get_db_connection() as db_connection:
+            with db_connection.cursor() as cursor:
+                cursor.execute("SELECT api_key, api_url FROM customer_data WHERE org_id = %s", (org_id,))
+                result = cursor.fetchone()
+                
+                if not result:
+                    return jsonify({"error": "API key not found for this organization"}), 404
+                
+                cursor.execute("SELECT site_id FROM customer_sites WHERE org_id = %s", (org_id,))
+                site_ids = [row for row in cursor.fetchall()]
 
         encrypted_api_key = result[0]
         api_url = result[1]
@@ -139,8 +135,6 @@ def get_pie_chart():
             logger.error(f"Error decrypting API key: {e}")
             return jsonify({"error": "Failed to decrypt API key"}), 500
         
-
-        site_ids = [row for row in site_id_sql]
 
         #print(site_ids)
         #print(api_url)
@@ -154,8 +148,8 @@ def get_pie_chart():
         #print(password_policy_score, password_policy_recs)
 
         logger.info(f"Pie chart data requested for org: {org_id}")
-        #print(api_key)  
-        return jsonify({
+        
+        json_data = ({
             "admin_score": admin_score,
             "failing_admins": failing_admins,
             "site_firmware_score": site_firmware_score,
@@ -163,6 +157,10 @@ def get_pie_chart():
             "password_policy_score": password_policy_score,
             "password_policy_recs": password_policy_recs
         })
+
+        logger.info(json.dumps(json_data))
+
+        return json_data
     
     except Exception as e:
         logger.error(f"Error in pie-chart endpoint: {e}")
@@ -243,40 +241,27 @@ def get_ap_list():
 def check_existing_data():
     org_id = request.args.get('org_id')
     
-    # If no org_id is returned with the API call then this will result in an error being returned. 
     if not org_id:
         return jsonify({"error": "Missing org_id parameter"}), 400
     
-    # This function is not currently in use. It should call the validate_org_id function and check that the org_id matches regex
     if not validate_org_id(org_id):
         return jsonify({"error": "Invalid organization ID format"}), 400
 
     org_id = org_id.strip()
 
     try:
-        db_connector = get_db_connection()
-        cursor = db_connector.cursor()
-        
-        # Build the query string to send to the mariaDB backend, this is checking whether or not more than 1 instance of the org_id is already in the database
-        # if the ID already exists then it is assumed that the org will not require another API key, and the API input option will be disabled.
-        # Future TODO is to add the option for customers to provide their own database credentials and store everything locally.
-        sql = "SELECT COUNT(*) FROM customer_data WHERE org_id = %s"
-        cursor.execute(sql, (org_id,))
-        (count,) = cursor.fetchone()
-        
-        # Returns a console log which can then be used for debugging.
-        logger.info(f"Data check for org_id: {org_id}, found: {count}")
-        # Correct responses here are 0 and 1, anything greater than 1 and something has gone very wrong somewhere.
-        return jsonify({"exists": count > 0})
-        
+        with get_db_connection() as db_connector:
+            with db_connector.cursor() as cursor:
+                sql = "SELECT COUNT(*) FROM customer_data WHERE org_id = %s"
+                cursor.execute(sql, (org_id,))
+                (count,) = cursor.fetchone()
+                
+                logger.info(f"Data check for org_id: {org_id}, found: {count}")
+                return jsonify({"exists": count > 0})
+                
     except Exception as e:
         logger.error(f"Error checking existing data: {e}")
-        return jsonify({"error": "Database error <- likely the Flask server is not running or the query string is malformed."}), 500
-    finally:
-        if db_connector:
-            if 'cursor' in locals():
-                cursor.close()
-            db_connector.close()
+        return jsonify({"error": "Database error"}), 500
 
 @app.route('/api/settings', methods=['GET'])
 def get_settings():
