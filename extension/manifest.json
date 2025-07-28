@@ -11,6 +11,7 @@
   "background": {
     "service_worker": "background.js"
   },
+  "permissions": ["tabs", "activeTab", "cookies", "storage", "scripting"],
   "action": {
     "default_popup" : "popup/popup.html",
     "default_title" : "Mist Security Audit",
@@ -23,16 +24,8 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
-  "content_scripts": [
-    {
-      "js": [
-        "content.js",
-        "popup/popup.js"],
-      "matches": ["https://*/*"],
-      "run_at": "document_end"
-    }
-  ],
   "host_permissions": [
+    "http://127.0.0.1:8510/*",
     "https://*.mist.com/*",
     "https://*.mistsys.com/*",
     "https://*.mist-federal.com/*",

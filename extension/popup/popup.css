@@ -1,0 +1,395 @@
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                width: auto; 
+                height: 200px; 
+                margin: 0;
+                padding: 0;
+                overflow: hidden; /* Initially no scrolling needed */
+                transition: all 0.3s ease-in-out; /* Smooth resize animation */
+            }
+
+            .banner {
+                background-color: #003366;
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 16px;
+                padding: 8px 16px;
+                border-bottom: 2px solid #444;
+                height: 48px;
+                width: 100%;
+                flex-shrink: 0;
+            }
+
+            .banner-logo {
+                height: 64px;
+                width: 64px;
+                flex-shrink: 0;
+                position: relative;
+                top: 10px;
+            }
+
+            .banner-title {
+                font-size: 16px;
+                font-weight: 700;
+                white-space: nowrap;
+            }
+
+            body.chart-expanded .js-plotly-plot {
+                overflow: visible !important;
+            }
+
+            body.chart-expanded .plotly .annotation {
+                overflow: visible !important;
+            }
+
+            .header-content {
+                color: #003366;
+                text-align: center;
+                font-size: 18px;
+                font-weight: 400;
+                margin: 16px 0;
+                padding: 0 15px;
+            }
+
+            #chart-inner {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            body.chart-expanded {
+                width: 650px !important;
+                height: 520px !important;
+                overflow: auto;
+            }
+
+            body.chart-expanded .pie-chart {
+                display: block;
+                width: 620px;
+                height: 420px;
+                margin: 10px auto;
+            }
+    
+            body.chart-expanded #pie-chart {
+                width: 620px !important;
+                height: 420px !important;
+            }
+
+            .popup-content {
+                padding: 15px;
+                min-height: 60px;
+                max-height: 200px;
+                overflow-y: auto;
+                white-space: pre-wrap;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                background-color: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 4px;
+                margin: 0 15px;
+            }
+
+            .button-bar {
+                display: flex;
+                border-top: 1px solid #ccc;
+                background-color: #f7f7f7;
+                margin-top: 15px;
+            }
+
+            .js-plotly-plot {
+                overflow: visible !important;
+            }
+
+            /* Fix any potential clipping of labels */
+            .plotly .legend {
+                overflow: visible !important;
+            }
+
+            .plotly .annotation {
+                overflow: visible !important;
+            }
+
+            .action-button {
+                flex: 1;
+                border: none;
+                border-right: 1px solid #ccc;
+                background-color: #f7f7f7;
+                color: #424242;
+                cursor: pointer;
+                height: 48px;
+                min-width: 64px;
+                width: auto;
+                font-size: 12px;
+                font-weight: 300;
+                font-family: inherit;
+                text-align: center;
+                transition: all 0.3s ease;
+                white-space: nowrap;
+                padding: 0 2px;
+            }
+
+            .action-button:last-child {
+                border-right: none;
+            }
+
+            .action-button:hover {
+                background-color: #e0e0e0;
+                transform: translateY(-1px);
+            }
+
+            .action-button:focus {
+                outline: 2px solid #0066cc;
+                outline-offset: -2px;
+            }
+
+            .action-button:active {
+                transform: translateY(0);
+            }
+
+            .action-button.clicked {
+                background-color: #666666;
+                color: white;
+                font-weight: 400;
+            }
+
+            .action-button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            .settings-menu {
+                display: none;
+                color: #003366;
+                text-align: center;
+                padding: 15px;
+                animation: fadeIn 0.3s ease-in;
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            .settings-section {
+                margin-bottom: 20px;
+                padding: 10px;
+                background-color: #f8f9fa;
+                border-radius: 6px;
+                border: 1px solid #e9ecef;
+            }
+
+            .settings-section h3 {
+                margin: 0 0 8px 0;
+                font-size: 14px;
+                font-weight: 600;
+                color: #495057;
+            }
+
+            .settings-value {
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                color: #6c757d;
+                word-break: break-all;
+                background-color: white;
+                padding: 8px;
+                border-radius: 4px;
+                border: 1px solid #dee2e6;
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+                color: #495057;
+                text-align: left;
+            }
+
+            .input-box {
+                width: 100%;
+                padding: 10px;
+                border: 2px solid #dee2e6;
+                border-radius: 6px;
+                font-family: inherit;
+                font-size: 14px;
+                transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            }
+
+            .input-box:focus {
+                outline: none;
+                border-color: #0066cc;
+                box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+            }
+
+            .input-box:disabled {
+                background-color: #e9ecef;
+                color: #6c757d;
+                cursor: not-allowed;
+            }
+
+            .submit-button {
+                width: 100%;
+                padding: 10px;
+                border: none;
+                background-color: #28a745;
+                color: white;
+                font-size: 14px;
+                font-weight: 600;
+                font-family: inherit;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                margin-top: 10px;
+            }
+
+            .submit-button:hover:not(:disabled) {
+                background-color: #218838;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .submit-button:disabled {
+                background-color: #6c757d;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+            .purge-button {
+                width: 100%;
+                padding: 10px;
+                border: none;
+                background-color: #dc3545;
+                color: white;
+                font-size: 14px;
+                font-weight: 600;
+                font-family: inherit;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                margin-top: 15px;
+                display: none;
+            }
+
+            .purge-button:hover:not(:disabled) {
+                background-color: #c82333;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .purge-button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+            .message {
+                padding: 10px;
+                margin: 10px 0;
+                border-radius: 6px;
+                font-size: 13px;
+                line-height: 1.4;
+            }
+
+            .message.info {
+                background-color: #d1ecf1;
+                color: #0c5460;
+                border: 1px solid #bee5eb;
+            }
+
+            .message.success {
+                background-color: #d4edda;
+                color: #155724;
+                border: 1px solid #c3e6cb;
+            }
+
+            .message.error {
+                background-color: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+            }
+
+            .paragraphs {
+                font-family: inherit;
+                text-align: center;
+                margin: 10px 0;
+                line-height: 1.5;
+            }
+
+            main {
+                width: 100%;
+                padding: 10px;
+                box-sizing: border-box;
+            }
+
+            #api-obscured {
+                font-weight: 300;
+                color: #444;
+                word-break: break-word;
+                text-align: center;
+                margin-top: 10px;
+                padding: 10px;
+                background-color: #e9ecef;
+                border-radius: 4px;
+                font-family: 'Courier New', monospace;
+            }
+
+            .loading {
+                opacity: 0.6;
+                pointer-events: none;
+                text-align: center;
+                padding: 20px;
+            }
+                
+                
+            .header-content {
+                font-size: 16px;
+            }
+            
+            .popup-content {
+                padding: 10px;
+                min-height: 200px;
+                overflow: visible;
+                box-sizing: border-box;
+            }
+
+            .pie-chart {
+                width: auto; 
+                height: auto; 
+                margin: 0;
+                overflow: visible;
+                position: relative;
+                display: none;
+                opacity: 0;
+                transform: scale(0.9);
+                pointer-events: none;
+                transition: opacity 0.5s ease, transform 0.5s ease;
+            }
+
+            #pie-chart {
+                width: 100%;
+                height: 100%;
+                min-width: 580px;
+                min-height: 400px;
+            }
+            
+            button, select {
+                font-size: 14px;
+                padding: 8px 12px;
+            }
+        
+            .pie-chart.visible {
+                opacity: 1;
+                transform: scale(1);
+                pointer-events: auto;
+            }

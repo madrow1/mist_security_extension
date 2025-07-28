@@ -130,40 +130,7 @@ function buildApiRequest(action, request) {
         case 'pie':
             endpoint = `${baseUrl}/pie-chart?org_id=${encodeURIComponent(request.org_id || '')}`;
             fetchOptions.method = 'GET';
-            fetch(endpoint, {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Network response was not OK");
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log("Admin Score:", data.admin_score);
-                console.log("Failing Admins:", data.failing_admins);
-                console.log("Site Firmware Score:", data.site_firmware_score);
-                console.log("Failing Firmware Sites:", data.site_firmware_failing);
-                console.log("Password Policy Score:", data.password_policy_score);
-                console.log("Password Policy Recommendations:", data.password_policy_recs);
-
-                var pieValues = [
-                    {
-                        values: [data.admin_score, data.site_firmware_score, data.password_policy_score],
-                        labels: ["Admin Score", "Auto-firmware Upgrade Score", "Password Policy Score"],
-                        name: 'Mist Security Score',
-                        hole: .4,
-                        type: 'pie'
-                    }
-                ];
-
-            })
-            .catch(error => {
-                console.error("Error fetching pie chart data:", error);
-            });
-            break;       
+            break;
         case 'histogram':
             endpoint = `${baseUrl}/histogram?org_id=${encodeURIComponent(request.org_id || '')}`;
             fetchOptions.method = 'GET';
