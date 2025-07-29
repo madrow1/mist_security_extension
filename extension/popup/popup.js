@@ -310,6 +310,57 @@ const TabManager = {
     }
 };
 
+const enhancedCenterTextPlugin = {
+    id: 'enhancedCenterText',
+    beforeDraw(chart) {
+        const { ctx, chartArea: { left, top, width, height } } = chart;
+        const data = chart.data.datasets[0].data;
+        const validScores = data.filter(score => score !== null && score !== undefined);
+       
+        let onlyScores = data.slice(0, -1)
+
+        const maxPossibleScore = (data.length-1) * 10; // 4 tests × 10 points = 40 max
+        
+        const highScore = maxPossibleScore*0.9
+        const midScore = maxPossibleScore*0.7
+
+        const totalPoints = onlyScores.reduce((sum, value) => sum + (value || 0), 0);
+        
+
+        let scoreColor = '#d32f2f'; // Red for low scores
+        if (totalPoints >= highScore) scoreColor = '#2D6A00'; // Green for high scores
+        else if (totalPoints >= midScore) scoreColor = '#f57f17'; // Yellow for medium scores
+        
+        ctx.save();
+        
+        const centerX = left + width / 2;
+        const centerY = top + height / 2;
+        
+        // Draw circular background
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 60, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fill();
+        ctx.strokeStyle = scoreColor;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        // Draw main score as points/max
+        ctx.font = 'bold 28px Arial';
+        ctx.fillStyle = scoreColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${totalPoints}/${maxPossibleScore}`, centerX, centerY - 5);
+        
+        // Draw label
+        ctx.font = 'bold 12px Arial';
+        ctx.fillStyle = '#666';
+        ctx.fillText('TOTAL POINTS', centerX, centerY + 20);
+        
+        ctx.restore();
+    }
+};
+
 const ChartManager = {
     // Chart instance reference for cleanup
     chartInstance: null,
@@ -398,9 +449,9 @@ const ChartManager = {
             
             if (pieChartContainer) {
                 pieChartContainer.style.display = 'block';
-                pieChartContainer.style.width = '800px';
-                pieChartContainer.style.height = '600px';
-                pieChartContainer.style.margin = '0 auto'; // Center it
+                pieChartContainer.style.width = '600px';
+                pieChartContainer.style.height = '400px';
+                pieChartContainer.style.margin = '0 auto';
             }
             
             // Expand the body
@@ -431,51 +482,106 @@ const ChartManager = {
                 return;
             }
 
-            // Create chart with better sizing options
+            // Debug the data being passed to chart
+            console.log("Chart data received:", {
+                admin_score: data.admin_score,
+                site_firmware_score: data.site_firmware_score,
+                password_policy_score: data.password_policy_score,
+                ap_firmware_score: data.ap_version_score || data.ap_firmware_score
+            });
+
+            // Create chart with center text plugin
             this.chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ["Admin Score", "Auto-firmware Score", "Password Score"],
+                    labels: ["Admin Score", "Auto-firmware Upgrade Score", "Password Score", "AP Firmware Score", ""],
                     datasets: [{
-                        data: [data.admin_score, data.site_firmware_score, data.password_policy_score],
-                        backgroundColor: ['#2D6A00', '#84B135', '#0095A9'],
-                        cutout: '40%',
+                        data: [
+                            data.admin_score,
+                            data.site_firmware_score,
+                            data.password_policy_score,
+                            data.ap_version_score,
+                            Math.max(1, 40 - ((data.admin_score || 0) + (data.site_firmware_score || 0) + (data.password_policy_score || 0) + (data.ap_version_score || 0)))
+                        ],
+                        backgroundColor: ['#2D6A00', '#84B135', '#0095A9', '#FF6B35', "#FFFFFF"],
+                        cutout: '60%', // Increased cutout for more center space
                         borderWidth: 3,
-                        hoverOffset: 15, // Increased from 5 for better visibility
-                        spacing: 1                   
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'right',
-                        labels: {
+                        hoverOffset: 15,
+                        spacing: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                font: {
+                                    size: 12
+                                },
+                                padding: 15,
+                                usePointStyle: true,
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        return data.labels.map((label, i) => {
+                                            // Skip the missing segment in legend
+                                            if (label === "Missing Points" || label === "") return null;
+                                            
+                                            const dataset = data.datasets[0];
+                                            const value = dataset.data[i] || 0;
+                                            return {
+                                                text: `${label}: ${value}/10`,
+                                                fillStyle: dataset.backgroundColor[i],
+                                                strokeStyle: dataset.backgroundColor[i],
+                                                lineWidth: 0,
+                                                pointStyle: 'circle',
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        }).filter(Boolean); // Remove null entries
+                                    }
+                                    return [];
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Security Audit Scores',
                             font: {
-                                size: 14 // Larger font for better readability
+                                size: 18,
+                                weight: 'bold'
+                            },
+                            padding: {
+                                top: 10,
+                                bottom: 20
+                            },
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    return `${label}: ${value}`;
+                                }
                             }
                         }
                     },
-                    title: {
-                        display: true,
-                        text: 'Security Audit Scores',
-                        font: {
-                            size: 18
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const labels = this.chartInstance.data.labels;
+                            const values = this.chartInstance.data.datasets[0].data;
+                            
+                            alert(`${labels[index]}: ${values[index]}`);
                         }
                     }
-                }
-            }
-        }
-    );
-            
-            console.log("Chart created successfully with dimensions:", {
-                containerWidth: pieChartContainer.clientWidth,
-                containerHeight: pieChartContainer.clientHeight,
-                canvasWidth: chartCanvas.width,
-                canvasHeight: chartCanvas.height
+                },
+                plugins: [enhancedCenterTextPlugin] // Register the center text plugin
             });
+            
         } catch (error) {
             console.error("Chart creation error:", error);
             alert(`Chart creation failed: ${error.message}`);
@@ -713,6 +819,7 @@ function setupEventListeners() {
                 await ActionHandlers.handleSettingsAction();
             } else if (action === 'pie') {
                 await ChartManager.handlePieChart();
+                ChartManager.hideSettings()
             //} else if (action === 'export-data') {
                 // Handle data export
             //    await ActionHandlers.handleDataExport();
@@ -799,4 +906,5 @@ function handleError(context, error, element = null) {
     if (element) UIUtils.showError(element, error.message);
     return error;
 }
+
 

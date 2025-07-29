@@ -10,8 +10,9 @@ from cryptography.fernet import Fernet
 import hashlib
 import secrets
 import requests
-from tests import check_admin, check_firmware, check_password_policy
+from tests import check_admin, check_firmware, check_password_policy, get_ap_firmware_versions
 import re
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -124,7 +125,7 @@ def get_pie_chart():
                     return jsonify({"error": "API key not found for this organization"}), 404
                 
                 cursor.execute("SELECT site_id FROM customer_sites WHERE org_id = %s", (org_id,))
-                site_ids = [row for row in cursor.fetchall()]
+                site_ids = [row[0] for row in cursor.fetchall()]
 
         encrypted_api_key = result[0]
         api_url = result[1]
@@ -134,10 +135,6 @@ def get_pie_chart():
         except Exception as e:
             logger.error(f"Error decrypting API key: {e}")
             return jsonify({"error": "Failed to decrypt API key"}), 500
-        
-
-        #print(site_ids)
-        #print(api_url)
 
         admin_score, failing_admins = check_admin(site_ids,org_id,api_url, api_key)
         site_firmware_score, site_firmware_failing = check_firmware(site_ids,org_id,api_url, api_key)
@@ -148,14 +145,19 @@ def get_pie_chart():
         #print(password_policy_score, password_policy_recs)
 
         logger.info(f"Pie chart data requested for org: {org_id}")
-        
+        ap_version_score, ap_version_recs, ap_list = get_ap_firmware_versions(site_ids,org_id,api_url, api_key)
+
+
+
         json_data = ({
             "admin_score": admin_score,
             "failing_admins": failing_admins,
             "site_firmware_score": site_firmware_score,
             "site_firmware_failing": site_firmware_failing,
             "password_policy_score": password_policy_score,
-            "password_policy_recs": password_policy_recs
+            "password_policy_recs": password_policy_recs,
+            "ap_version_score": ap_version_score,
+            "ap_firmware_recs": ap_version_recs,
         })
 
         logger.info(json.dumps(json_data))
@@ -274,99 +276,148 @@ def get_settings():
 @app.route('/api/data', methods=['POST'])
 def insert_customer_data():
     db_connector = None
-    # Initialise a list to containt the site_ids 
+    cursor = None
     site_ids = []
+    
     try:
-        # intialise the data variable to receive json data from the front end
+        # Parse request data
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
 
-        #print(data)
-
-        # These are the expected data types being returned from the front end
+        # Get required fields
         org_id = data.get('org_id', '').strip()
         api_key = data.get('api_key', '').strip()
         api_url = data.get('api_url', '').strip()
 
-        # If any of the above are missing then return an error.
         if not org_id or not api_url or not api_key:
-            return jsonify({"error": "Missing required fields: org_id or api_key"}), 400
+            return jsonify({"error": "Missing required fields"}), 400
         
-        # These checks were returning errors TODO is fix that 
-        #if not validate_org_id(org_id):
-            #return jsonify({"error": "Invalid organization ID format"}), 400
-        #if not validate_api_key(api_key):
-        #    return jsonify({"error": "Invalid API key format"}), 400
+        logger.info(f"Attempting to authenticate API for org_id: {org_id} with URL: {api_url}")
 
-        #print(api_url)
-
-
-        headers = {'Content-Type': 'application/json', 'Authorization': f'Token {api_key}'}
-        
-        #print(f"https://{api_url}/api/v1/orgs/{org_id}/sites", headers)
-        
-        response = requests.get(f"https://{api_url}/api/v1/orgs/{org_id}/sites", headers=headers)
-
-        # The response containing anything but a 200 is considered a fail
-        if response.status_code != 200:
-            return jsonify({"error": "Failed to authenticate API key <- This error is as a result of a failed GET"}), 401
-
-        #print(response.json())
-
-        # save the response to a variable for no particular reason
-        data = response.json()
-
-        # Iterate over the contents of the data variable. Since it should return a JSON array containing JSON objects we should then get as many outputs as their are sites in the org
-        for site in data:
-            # Strip out the 'id' field from each object
-            site_id = site.get('id')
-            if site_id:
-                logger.info(f"site_id: {site_id} added")
-                # site_ids are then appended to the site_id list for later use
-                site_ids.append(site_id)
-
-        encrypted_api_key = encrypt_api_key(api_key)
-
+        # Start database transaction
         db_connector = get_db_connection()
+        db_connector.autocommit = False
         cursor = db_connector.cursor()
+        
+        try:
+            # Check for existing data first
+            cursor.execute("SELECT COUNT(*) FROM customer_data WHERE org_id = %s", (org_id,))
+            (count,) = cursor.fetchone()
+            if count > 0:
+                logger.warning(f"Duplicate API key attempt for org_id: {org_id}")
+                return jsonify({"error": "API key already exists for this organization"}), 409
 
-        cursor.execute(
-            "INSERT INTO customer_data (org_id, api_url, api_key) VALUES (%s, %s, %s)",
-            (org_id, api_url, encrypted_api_key)
-        )
+            headers = {'Content-Type': 'application/json'}
+            auth_url = f"https://{api_url}/api/v1/orgs/{org_id}/sites"
+            
+            headers['Authorization'] = f'Token {api_key}'
+            response = requests.get(auth_url, headers=headers, timeout=10)
+            
+            
+            # Log the response for debugging
+            logger.info(f"API response: {response.status_code} for URL: {auth_url}")
+            
+            if response.status_code != 200:
+                error_details = ""
+                try:
+                    error_data = response.json()
+                    error_details = f" - {error_data.get('detail', '')}"
+                except:
+                    error_details = f" - {response.text[:200]}"
+                
+                logger.error(f"API authentication failed: {response.status_code}{error_details}")
+                return jsonify({
+                    "error": f"Failed to authenticate API key (Status: {response.status_code})",
+                    "details": error_details.strip(" - ")
+                }), 401
 
+            # Parse site data
+            sites_data = response.json()
+            logger.info(f"Retrieved {len(sites_data)} sites from API")
+            
+            for site in sites_data:
+                site_id = site.get('id')
+                if site_id and isinstance(site_id, str) and len(site_id) > 10:
+                    site_ids.append(site_id)
+                    logger.info(f"Valid site_id added: {site_id}")
+                else:
+                    logger.warning(f"Invalid site_id skipped: {site_id}")
 
-        for site_id in site_ids:
+            if not site_ids:
+                logger.error("No valid site IDs found")
+                return jsonify({"error": "No valid sites found for this organization"}), 404
+
+            # Insert customer data
+            encrypted_api_key = encrypt_api_key(api_key)
             cursor.execute(
-                """
-                INSERT INTO customer_sites (org_id, site_id, score_1, score_2, score_3, score_4)
-                VALUES (%s, %s, 0, 0, 0, 0)
-                """,
-                (org_id, site_id)
+                "INSERT INTO customer_data (org_id, api_url, api_key) VALUES (%s, %s, %s)",
+                (org_id, api_url, encrypted_api_key)
             )
+            logger.info("Customer data inserted successfully")
 
-        db_connector.commit()
+            # Get scores with error handling
+            admin_score, failing_admins = check_admin(site_ids, org_id, api_url, api_key)
+            site_firmware_score, site_firmware_failing = check_firmware(site_ids, org_id, api_url, api_key)
+            password_policy_score, password_policy_recs = check_password_policy(site_ids, org_id, api_url, api_key)
+            ap_version_score, ap_version_recs, ap_list = get_ap_firmware_versions(site_ids,org_id,api_url, api_key)
 
-        logger.info(f"Data inserted successfully for org_id: {org_id}")
-        return jsonify({"success": True, "message": "Data inserted successfully"})
+            # Generate batch ID
+            batch_id = datetime.now().strftime('%Y%m%d%H%M%S')
 
+            # Insert site data
+            sites_inserted = 0
+            for site_id in site_ids:
+                try:
+                    cursor.execute(
+                        """
+                        INSERT INTO customer_sites (org_id, site_id, admin_score, site_firmware_score, password_policy_score, ap_firmware_score, batch_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (org_id, site_id, admin_score, site_firmware_score, password_policy_score, ap_version_score, batch_id)
+                    )
+                    sites_inserted += 1
+                except Exception as site_error:
+                    logger.error(f"Error inserting site {site_id}: {site_error}")
+                    raise
+
+            # Commit transaction
+            db_connector.commit()
+            logger.info(f"Successfully inserted {sites_inserted} sites for org_id: {org_id}")
+
+            return jsonify({
+                "success": True, 
+                "message": "Data inserted successfully",
+                "sites_added": sites_inserted,
+                "batch_id": batch_id
+            })
+            
+        except Exception as tx_error:
+            # Rollback transaction on error
+            db_connector.rollback()
+            logger.error(f"Transaction error: {tx_error}")
+            raise tx_error
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error during API request: {e}")
+        return jsonify({"error": f"Network error: {str(e)}"}), 500
     except mysql.connector.Error as e:
         logger.error(f"Database error in /api/data: {e}")
-        return jsonify({"error": "Database error"}), 500
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
     except Exception as e:
         logger.error(f"Error in /api/data: {e}")
-        return jsonify({"error": "Internal server error"}), 500
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
     finally:
+        if cursor:
+            cursor.close()
         if db_connector:
-            if 'cursor' in locals():
-                cursor.close()
             db_connector.close()
 
 
 @app.route('/api/purge-api-key', methods=['POST'])
 def purge_api_key():
     db_connector = None
+    cursor = None
     
     try:
         data = request.get_json()
@@ -383,33 +434,50 @@ def purge_api_key():
             return jsonify({"error": "Invalid organization ID format"}), 400
 
         db_connector = get_db_connection()
+        db_connector.autocommit = False
         cursor = db_connector.cursor()
         
-        # Check if record exists before deletion
-        check_sql = "SELECT COUNT(*) FROM customer_data WHERE org_id = %s"
-        cursor.execute(check_sql, (org_id,))
-        (count,) = cursor.fetchone()
-        
-        if count == 0:
-            return jsonify({"error": "No data found for this organization"}), 404
-        
-        # Delete the record
-        sql = "DELETE FROM customer_data WHERE org_id = %s"
-        cursor.execute(sql, (org_id,))
-        
-        logger.info(f"API key purged for org_id: {org_id}")
-        return jsonify({"success": True, "message": "API key purged successfully"})
-        
+        try:
+            # Check if record exists
+            cursor.execute("SELECT COUNT(*) FROM customer_data WHERE org_id = %s", (org_id,))
+            (count,) = cursor.fetchone()
+            
+            if count == 0:
+                return jsonify({"error": "No data found for this organization"}), 404
+            
+            # Delete from customer_sites first (foreign key constraint)
+            cursor.execute("DELETE FROM customer_sites WHERE org_id = %s", (org_id,))
+            sites_deleted = cursor.rowcount
+            
+            # Delete from customer_data
+            cursor.execute("DELETE FROM customer_data WHERE org_id = %s", (org_id,))
+            data_deleted = cursor.rowcount
+            
+            # Commit transaction
+            db_connector.commit()
+            
+            logger.info(f"API key purged for org_id: {org_id}, {sites_deleted} sites deleted")
+            return jsonify({
+                "success": True, 
+                "message": "API key purged successfully",
+                "sites_deleted": sites_deleted,
+                "records_deleted": data_deleted
+            })
+            
+        except Exception as tx_error:
+            db_connector.rollback()
+            raise tx_error
+            
     except mysql.connector.Error as e:
         logger.error(f"Database error in purge-api-key: {e}")
-        return jsonify({"error": "Database error"}), 500
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
     except Exception as e:
         logger.error(f"Error in purge-api-key: {e}")
-        return jsonify({"error": "Internal server error"}), 500
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
     finally:
+        if cursor:
+            cursor.close()
         if db_connector:
-            if 'cursor' in locals():
-                cursor.close()
             db_connector.close()
 
 @app.route('/api/get-site-id', methods = ['GET'])

@@ -13,8 +13,9 @@ body {
 
 /* Body expansion for chart view */
 body.chart-expanded {
-    width: 820px !important; /* Slightly larger than chart width */
-    height: 700px !important; /* Taller than chart height */
+    min-width: 600px;
+    min-height: 500px;
+    height: auto;
     overflow: auto;
 }
 
@@ -57,7 +58,6 @@ body.chart-expanded {
 
 .popup-content {
     padding: 10px;
-    min-height: 200px;
     overflow: visible;
     white-space: pre-wrap;
     font-family: 'Courier New', monospace;
@@ -69,28 +69,26 @@ body.chart-expanded {
     box-sizing: border-box;
 }
 
-/* Chart container */
+/* Chart container - single definition */
 #pie-chart {
     width: 800px;
-    height: 600px; /* Explicit height */
+    height: 100%;
     position: relative;
-    margin: 0 auto; /* Center horizontally */
+    margin: 0;
     padding: 15px;
     box-sizing: border-box;
     display: none; /* Initially hidden */
 }
 
-/* Chart canvas */
-#chart-inner {
-    width: 100% !important; /* Use percentage of container width */
-    height: 100% !important; /* Use percentage of container height */
-    max-width: 770px; /* Account for padding */
-    max-height: 570px; /* Account for padding */
-}
-
 /* Visible state */
 #pie-chart.visible {
-    display: block;
+    display: block; /* Force display with !important */
+}
+
+/* Chart canvas - single definition */
+#chart-inner {
+    width: 800px; 
+    height: 100%;
 }
 
 /* Chart tooltip styling */
