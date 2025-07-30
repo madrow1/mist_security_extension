@@ -94,6 +94,7 @@ body.chart-expanded {
     margin-top: 15px;
 }
 
+.db-submit-button,
 .action-button,
 .submit-button,
 .purge-button {
@@ -176,6 +177,10 @@ body.chart-expanded {
     color: #495057;
 }
 
+#db-settings {
+    text-align: left;
+}
+
 .settings-value {
     font-family: 'Courier New', monospace;
     font-size: 12px;
@@ -228,6 +233,7 @@ button, select {
     padding: 8px 12px;
 }
 
+.db-submit-button,
 .submit-button {
     width: 100%;
     padding: 10px;
@@ -242,12 +248,14 @@ button, select {
     margin-top: 10px;
 }
 
+.db-submit-button:hover:not(:disabled),
 .submit-button:hover:not(:disabled) {
     background-color: #218838;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.db-submit-button:disabled,
 .submit-button:disabled {
     background-color: #6c757d;
     cursor: not-allowed;

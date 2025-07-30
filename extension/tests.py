@@ -2,6 +2,8 @@ import requests
 import json 
 from datetime import datetime 
 import pandas as pd 
+
+# Simplified the scoring system by putting it all in one location and calling it from the end function, reduces the risk of spelling mistakes 
 def calculate_score_points(success_count, total_count):
     if total_count == 0:
         return 0

@@ -47,12 +47,13 @@ except Exception as e:
     logger.error(f"Error loading configuration: {e}")
     exit(1)
 
-# Initialize encryption key (in production, store this securely)
+# Initialize encryption key this is stored outside of the application filepath ideally.
 def get_or_create_encryption_key():
     key_file = 'encryption.key'
     if os.path.exists(key_file):
         with open(key_file, 'rb') as f:
             return f.read()
+        # Generate a key if one does not already exist
     else:
         key = Fernet.generate_key()
         with open(key_file, 'wb') as f:
@@ -63,7 +64,7 @@ def get_or_create_encryption_key():
 encryption_key = get_or_create_encryption_key()
 cipher_suite = Fernet(encryption_key)
 
-# Database connection pool
+# Database connection pool which can then be called throughout the extensions usage
 db_config = {
     'host': config['host'],
     'user': config['user'],
@@ -97,6 +98,7 @@ import re
 # Define regex pattern once at module level
 UUID_PATTERN = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
 
+# Uses the UUID variable and RE above to validate the org_id collected from the URL bar
 def validate_org_id(org_id):
     if not org_id or len(org_id.strip()) != 36:
         return False
@@ -108,16 +110,18 @@ def validate_api_key(api_key):
         return False
     return True
 
+# Forms the API route that calls the pie chart data from the backend
 @app.route('/api/pie-chart', methods=['GET'])
 def get_pie_chart():
     try:
+        # Strips the query parameter from the URL sent from the frontend 
         org_id = request.args.get('org_id')
         if not org_id or not validate_org_id(org_id):
             return jsonify({"error": "Invalid organization ID"}), 400
 
         with get_db_connection() as db_connection:
             with db_connection.cursor() as cursor:
-                # Get API credentials
+                # Get API credentials cursor is used to iterate over rows in a database
                 cursor.execute("SELECT api_key, api_url FROM customer_data WHERE org_id = %s", (org_id,))
                 result = cursor.fetchone()
                 
@@ -133,7 +137,7 @@ def get_pie_chart():
                 
                 latest_batch_id = batch_result[0]
 
-                # Get scores from latest batch
+                # Get scores from latest batch TODO this has to be edited for each new test added to the extension.
                 cursor.execute("""
                     SELECT admin_score, failing_admins, site_firmware_score, site_firmware_failing,
                            password_policy_score, password_policy_recs, ap_firmware_score, ap_firmware_recs,
@@ -296,6 +300,8 @@ def get_settings():
         logger.error(f"Error in settings endpoint: {e}")
         return jsonify({"error": "Internal server error"}), 500
         
+# /api/data is called every time the extension wants to input new data to the database. All other functions should read from the database
+# this limits the total number API calls made to Mist and speeds up application response time significantly 
 @app.route('/api/data', methods=['POST'])
 def insert_customer_data():
     db_connector = None
@@ -331,16 +337,20 @@ def insert_customer_data():
                 logger.warning(f"Duplicate API key attempt for org_id: {org_id}")
                 return jsonify({"error": "API key already exists for this organization"}), 409
 
+            # Establishes headers and auth for accessing the API
             headers = {'Content-Type': 'application/json'}
             auth_url = f"https://{api_url}/api/v1/orgs/{org_id}/sites"
             
             headers['Authorization'] = f'Token {api_key}'
+
+            # Actually sends the request and assigns it to the variable response
             response = requests.get(auth_url, headers=headers, timeout=10)
             
             
             # Log the response for debugging
             logger.info(f"API response: {response.status_code} for URL: {auth_url}")
             
+            # Checks the response code, various outputs depending on whether the response is succesful 
             if response.status_code != 200:
                 error_details = ""
                 try:
@@ -359,12 +369,16 @@ def insert_customer_data():
             sites_data = response.json()
             logger.info(f"Retrieved {len(sites_data)} sites from API")
             
+            # Loops over the sites collected by the API, the max number of sites should always be the max number that are defined in the org
             for site in sites_data:
+                # Since sites_data is a json object we can strip out the "id" parameter to return just the site_id string 
                 site_id = site.get('id')
+                # validates that at minimum the site ID is a string and is greater than 10 chars long
                 if site_id and isinstance(site_id, str) and len(site_id) > 10:
                     site_ids.append(site_id)
                     logger.info(f"Valid site_id added: {site_id}")
                 else:
+                    # Else the data collected cannot be a site ID
                     logger.warning(f"Invalid site_id skipped: {site_id}")
 
             if not site_ids:
@@ -373,26 +387,30 @@ def insert_customer_data():
 
             # Insert customer data
             encrypted_api_key = encrypt_api_key(api_key)
+            # Us the data collected to create the first table in our database "customer_data", this contains just the org, site and API key.
+            # The org_id can then be used as a foreign key for all other tables in the database
             cursor.execute(
                 "INSERT INTO customer_data (org_id, api_url, api_key) VALUES (%s, %s, %s)",
                 (org_id, api_url, encrypted_api_key)
             )
             logger.info("Customer data inserted successfully")
 
-            # Get scores with error handling
+            # Get scores with error handling, scores use API calls so this is a fairly heavy process.
             admin_score, failing_admins = check_admin(site_ids, org_id, api_url, api_key)
             site_firmware_score, site_firmware_failing = check_firmware(site_ids, org_id, api_url, api_key)
             password_policy_score, password_policy_recs = check_password_policy(site_ids, org_id, api_url, api_key)
             ap_version_score, ap_firmware_recs, ap_list = get_ap_firmware_versions(site_ids,org_id,api_url, api_key)
             wlan_score, wlan_frame, wlan_recs = get_wlans(site_ids,org_id,api_url, api_key)
 
-            # Generate batch ID
+            # Generate batch ID batch ID is based on the time of creation, so each ID is unique and increments for every time data is requested.
+            # This gives us something to ensure that the same data is not shown twice
             batch_id = datetime.now().strftime('%Y%m%d%H%M%S')
 
             # Insert site data
             sites_inserted = 0
             for site_id in site_ids:
                 try:
+                    # This query has to be updated for each new test added, it adds all site scores and recs to the customer_sites table
                     cursor.execute(
                         """
                         INSERT INTO customer_sites (org_id, site_id, admin_score, failing_admins, site_firmware_score, site_firmware_failing, password_policy_score, password_policy_recs, ap_firmware_score, ap_firmware_recs, wlan_score, wlan_recs, batch_id)
@@ -400,7 +418,6 @@ def insert_customer_data():
                         """,
                         (org_id, site_id, admin_score, json.dumps(failing_admins), site_firmware_score, json.dumps(site_firmware_failing), password_policy_score, json.dumps(password_policy_recs), ap_version_score, json.dumps(ap_firmware_recs), wlan_score, json.dumps(wlan_recs), batch_id) 
                     )
-                    print(org_id, site_id, admin_score, json.dumps(failing_admins), site_firmware_score, json.dumps(site_firmware_failing), password_policy_score, json.dumps(password_policy_recs), ap_version_score, json.dumps(ap_firmware_recs), wlan_score, json.dumps(wlan_recs), batch_id)
                     sites_inserted += 1
                 except Exception as site_error:
                     logger.error(f"Error inserting site {site_id}: {site_error}")
@@ -432,18 +449,21 @@ def insert_customer_data():
         if db_connector:
             db_connector.close()
 
+# fetch-new-data is called when the re-check button is clicked, it performs largely the same role as /api/data
 @app.route('/api/fetch-new-data', methods=['POST'])
 def fetch_new_data():
     db_connector = None
     cursor = None
     
     try:
-        data = request.get_json()
+        # FIXED: Get org_id from query parameters (as sent by frontend)
+        org_id = request.args.get('org_id', '').strip()
         
-        if not data:
-            return jsonify({"error": "No JSON data provided"}), 400
-            
-        org_id = data.get('org_id', '').strip()
+        if not org_id:
+            # Fallback to JSON body if not in query params
+            data = request.get_json()
+            if data:
+                org_id = data.get('org_id', '').strip()
         
         if not org_id:
             return jsonify({"error": "Missing org_id parameter"}), 400
@@ -488,10 +508,18 @@ def fetch_new_data():
             for site_id in site_ids:
                 cursor.execute(
                     """
-                    INSERT INTO customer_sites (org_id, site_id, admin_score, failing_admins, site_firmware_score, site_firmware_failing, password_policy_score,password_policy_recs, ap_firmware_score, ap_firmware_recs, wlan_score, wlan_recs, batch_id)
+                    INSERT INTO customer_sites (org_id, site_id, admin_score, failing_admins, 
+                                               site_firmware_score, site_firmware_failing, 
+                                               password_policy_score, password_policy_recs, 
+                                               ap_firmware_score, ap_firmware_recs, 
+                                               wlan_score, wlan_recs, batch_id)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
-                    (org_id, site_id, admin_score, json.dumps(failing_admins), site_firmware_score, json.dumps(site_firmware_failing), password_policy_score, json.dumps(password_policy_recs), ap_version_score, ap_firmware_recs, wlan_score, json.dumps(wlan_recs), batch_id)        
+                    (org_id, site_id, admin_score, json.dumps(failing_admins), 
+                     site_firmware_score, json.dumps(site_firmware_failing), 
+                     password_policy_score, json.dumps(password_policy_recs), 
+                     ap_version_score, json.dumps(ap_firmware_recs), 
+                     wlan_score, json.dumps(wlan_recs), batch_id)
                 )
                 sites_updated += 1
 
@@ -594,14 +622,32 @@ def get_site_id():
     db_connector = None
     cursor = None
     try: 
-
         org_id = request.args.get('org_id', '').strip()
+        
+        if not org_id:
+            return jsonify({"error": "Missing org_id parameter"}), 400
+            
+        if not validate_org_id(org_id):
+            return jsonify({"error": "Invalid organization ID format"}), 400
 
         db_connector = get_db_connection()
         cursor = db_connector.cursor()
 
-        sql = 'SELECT site_id FROM customer_sites WHERE org_id = %s'
-        cursor.execute(sql, (org_id,))
+        # The query is limited to only 1 site here to ensure that only the last recorded site is collected.
+        # This deals with an issue where the settings page would show every site, and some tests would run 1x for every batch_id
+        cursor.execute(
+            'SELECT batch_id FROM customer_sites WHERE org_id = %s ORDER BY batch_id DESC LIMIT 1', 
+            (org_id,)
+        )
+        batch_result = cursor.fetchone()  
+        
+        latest_batch_id = batch_result[0]  
+        
+        # Uses the batch ID to identify only the most recent sites.
+        cursor.execute(
+            'SELECT site_id FROM customer_sites WHERE org_id = %s AND batch_id = %s',
+            (org_id, latest_batch_id)  
+        )
 
         results = cursor.fetchall()
 
@@ -610,7 +656,8 @@ def get_site_id():
                 "success": True,
                 "org_id": org_id,
                 "site_ids": [],
-                "message": "No sites found for this organization"
+                "batch_id": latest_batch_id,
+                "message": "No sites found for this batch"
             })
         
         # Extract site_ids from results
@@ -620,6 +667,7 @@ def get_site_id():
             "success": True,
             "org_id": org_id,
             "site_ids": site_ids,
+            "batch_id": latest_batch_id,
             "count": len(site_ids)
         })
 
@@ -630,9 +678,9 @@ def get_site_id():
         logger.error(f"Error in get-site-id: {e}")
         return jsonify({"error": "Internal server error"}), 500
     finally:
+        if cursor:
+            cursor.close()
         if db_connector:
-            if 'cursor' in locals():
-                cursor.close()
             db_connector.close()
     
 @app.errorhandler(404)

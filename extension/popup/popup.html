@@ -40,7 +40,36 @@
                     <h3>Site IDs</h3>
                     <div class="settings-value" id="site-id">Loading...</div>
                 </div>
+
+                <div class="settings-section" id="db-settings">
+                    <input type="radio" id="db-local" name="db-selection" value="local">
+                    <label for="db-local">Configure Database</label><br>
+                    <input type="radio" id="db-remote" name="db-selection" value="remote" checked>
+                    <label for="db-remote">Default</label><br>              
+                    <p id="db-output"></p>           
+                </div>                 
                 
+                <form novalidate>
+                    <div class="form-group" id="db-menu">
+                        <label for="db-address-input">Database address</label>
+                        <input class="input-box" id="db-address-input" placeholder="Enter your database IP address">
+                        
+                        <label for="db-port-input">Database port</label>
+                        <input class="input-box" id="db-port-input" placeholder="Enter your database port (e.g., 3306, 5432)">
+                        
+                        <label for="db-database-input">Database name</label>
+                        <input class="input-box" id="db-database-input" placeholder="Enter your database name">
+                        
+                        <label for="db-user-input">Username</label>
+                        <input class="input-box" id="db-user-input" placeholder="Enter your database username">
+                        
+                        <label for="db-pass-input">Password</label>
+                        <input class="input-box" id="db-pass-input" type="password" placeholder="Enter your database password">
+
+                        <button class="db-submit-button" id="db-submit-button" type="button"> Submit Database Details </button>
+                    </div>
+                </form>
+
                 <form novalidate>
                     <div class="form-group">
                         <label for="api-input-box">API Key</label>
@@ -87,7 +116,7 @@
             <button class="action-button" data-action="aps" type="button" title="List access points">
                 APs
             </button>
-            <button class="action-button" data-action="fetch-new" type="button" title="Fetch fresh data">
+            <button class="action-button" data-action="fetch-new" type="button" title="Fetch fresh data" onClick="location.href=location.href;">
                 Re-check
             </button>
             <button id="settings-btn" class="action-button" data-action="settings" type="button" title="Configure API settings">

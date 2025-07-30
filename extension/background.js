@@ -54,6 +54,7 @@ function getUrl(tabId) {
     }, 100);
 }
 
+// Validates the URL that is in the tab, if that URL is a Mist URL then it should be updated to include a check mark. This does not happen reliably 
 function checkUrl(tabUrl) {
     try {
         const org = URL_PATTERNS.org.exec(tabUrl);
@@ -76,6 +77,7 @@ function checkUrl(tabUrl) {
     }
 }
 
+// This is the function cally by checkURL to actually update the colours 
 function apiBadge(color) {
     try {
         if (color) {
@@ -156,6 +158,7 @@ function buildApiRequest(action, request) {
             fetchOptions.method = 'POST';
             fetchOptions.headers = { 'Content-Type': 'application/json' };
             fetchOptions.body = JSON.stringify({
+                // include the org/api_key/url in the mody instead of the query string.
                 org_id: request.org_id,
                 api_key: request.api_key,
                 api_url: request.api_url
@@ -167,9 +170,7 @@ function buildApiRequest(action, request) {
             fetchOptions.method = 'POST';
             fetchOptions.headers = { 'Content-Type': 'application/json' };
             fetchOptions.body = JSON.stringify({
-                org_id: request.org_id,
-                api_key: request.api_key,
-                api_url: request.api_url
+                org_id: request.org_id
             });
             break;
         case 'purge-api-key':

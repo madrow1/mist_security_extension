@@ -219,6 +219,7 @@ const SettingsManager = {
         if (msg) msg.remove();
     },
 
+    // Hides the API key after it has been typed by covering the central text with dots
     obscureApiKey(apiKey) {
         if (!apiKey || apiKey.length <= 8) return '••••••••';
         return apiKey.slice(0, 4) + '••••••••' + apiKey.slice(-4);
@@ -314,6 +315,7 @@ const TabManager = {
     }
 };
 
+// Plugin that I absolutely did steal from stack overflow which creates a centre text on the doughnut and colours it according to the sites overall score
 const enhancedCenterTextPlugin = {
     id: 'enhancedCenterText',
     beforeDraw(chart) {
@@ -321,10 +323,13 @@ const enhancedCenterTextPlugin = {
         const data = chart.data.datasets[0].data;
         const validScores = data.filter(score => score !== null && score !== undefined);
        
+        // only scores uses a slice to take all scores included except the last one so that when the final value is calculated it is - the empty segment
         let onlyScores = data.slice(0, -1)
 
-        const maxPossibleScore = (data.length-1) * 10; // 4 tests × 10 points = 40 max
+        // data.length - 1 because we don't want to include the empty segment in our total scoring
+        const maxPossibleScore = (data.length-1) * 10; 
         
+        // Slight modification here so that the score is dynamically updated to reflect new tests being added
         const highScore = maxPossibleScore*0.9
         const midScore = maxPossibleScore*0.7
 
@@ -369,7 +374,7 @@ const ChartManager = {
     // Chart instance reference for cleanup
     chartInstance: null,
     
-    // Hide chart and clean up
+    // Hide chart and clean up, this function can be called from anywhere to hide the pie-chart
     hideChart() {
         const popupContent = document.getElementById('content-area');
         const pieChartContainer = document.getElementById('pie-chart');
@@ -391,6 +396,7 @@ const ChartManager = {
         }
     },
 
+    // performs the same function as hideChart() but for the settings menu
     hideSettings() {
             const settingsMenuDOM = document.getElementById('settings-menu');
 
@@ -437,10 +443,6 @@ const ChartManager = {
             // Give the browser a moment to process the DOM changes
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            // Now set the canvas dimensions after the container is properly sized
-            chartCanvas.width = pieChartContainer.clientWidth || 800;
-            chartCanvas.height = pieChartContainer.clientHeight || 600;
-            
             // Get the context
             const ctx = chartCanvas.getContext('2d');
             if (!ctx) {
@@ -449,18 +451,19 @@ const ChartManager = {
             }
 
             // Debug the data being passed to chart
-            console.log("Chart data received:", {
-                admin_score: data.admin_score,
-                admin_recs: data.failing_admins,
-                site_firmware_score: data.site_firmware_score,
-                password_policy_score: data.password_policy_score,
-                ap_firmware_score: data.ap_version_score || data.ap_firmware_score
-            });
+            //console.log("Chart data received:", {
+            //    admin_score: data.admin_score,
+            //    admin_recs: data.failing_admins,
+            //    site_firmware_score: data.site_firmware_score,
+            //    password_policy_score: data.password_policy_score,
+            //    ap_firmware_score: data.ap_version_score || data.ap_firmware_score
+            //});
 
             // Create chart with center text plugin
             this.chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
+                    // Labels/datasets/backgroundcolour all need to be updated each time a new test is added, the "" initialises an empty label for the white space
                     labels: ["Admin Score", "Auto-firmware Upgrade Score", "Password Score", "AP Firmware Score", "WLAN Template Score", ""],
                     datasets: [{
                         data: [
@@ -469,6 +472,7 @@ const ChartManager = {
                             data.password_policy_score,
                             data.ap_version_score,
                             data.wlan_score,
+                            // This TODO needs to be updated every time a new test is added
                             Math.max(1, 50 - ((data.admin_score || 0) + (data.site_firmware_score || 0) + (data.password_policy_score || 0) + (data.ap_version_score || 0) + (data.wlan_score || 0)))
                         ],
                         backgroundColor: ['#2D6A00', '#84B135', '#0095A9', '#FF6B35','#CCDB2A', '#FFFFFF'],
@@ -553,7 +557,7 @@ const ChartManager = {
                                     const index = context.dataIndex;
                                     let details = '';
                                     
-                                    // Add detailed recommendations based on the segment
+                                    // Add detailed recommendations based on the segment all detail here is drawn from the database for speed
                                     switch(index) {
                                         case 0: // Admin Score
                                                 details = 'Issues found:\n' + Object.entries(data.failing_admins)
@@ -875,6 +879,8 @@ function setupEventListeners() {
     DOMElements.apiInput = document.getElementById('api-input-box');
     DOMElements.apiSubmitButton = document.getElementById('submit-button');
     DOMElements.purgeBtn = document.getElementById('purge-api-btn');
+    DOMElements.dbMenu = document.getElementById('db-menu');
+    const radioButtons = document.querySelectorAll('input[name="db-selection"]');
 
     // Action button listeners
     document.querySelectorAll('.action-button').forEach(button => {
@@ -921,6 +927,30 @@ function setupEventListeners() {
             }
         });
     });
+
+
+    radioButtons.forEach((radio) => {
+        radio.addEventListener('change', (event) => {
+            if (event.target.checked) {
+                const selectedOption = event.target.value;
+                const labelText = document.querySelector(`label[for="${event.target.id}"]`).textContent;
+                const output = document.querySelector('#db-output');
+                
+                if (output) {
+                    output.innerHTML = `You selected: ${labelText} (${selectedOption})`;
+                }
+                
+                if (selectedOption === "local") { 
+                    DOMElements.dbMenu.style.display = 'block';
+                } else {
+                    DOMElements.dbMenu.style.display = 'none';
+                }
+            }
+        });
+    });
+
+    // Set initial state - hide menu since "remote" is checked by default
+    DOMElements.dbMenu.style.display = 'none';
 
     // API key submit listener
     if (DOMElements.apiSubmitButton) {
