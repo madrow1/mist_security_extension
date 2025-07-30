@@ -161,6 +161,17 @@ function buildApiRequest(action, request) {
                 api_url: request.api_url
             });
             break;
+        case 'fetch-new':
+            console.log("Attempting to fetch new data");
+            endpoint = `${baseUrl}/fetch-new-data?org_id=${encodeURIComponent(request.org_id)}`;
+            fetchOptions.method = 'POST';
+            fetchOptions.headers = { 'Content-Type': 'application/json' };
+            fetchOptions.body = JSON.stringify({
+                org_id: request.org_id,
+                api_key: request.api_key,
+                api_url: request.api_url
+            });
+            break;
         case 'purge-api-key':
             endpoint = `${baseUrl}/purge-api-key`;
             fetchOptions.method = 'POST';

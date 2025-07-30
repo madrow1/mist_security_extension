@@ -10,7 +10,7 @@ from cryptography.fernet import Fernet
 import hashlib
 import secrets
 import requests
-from tests import check_admin, check_firmware, check_password_policy, get_ap_firmware_versions
+from tests import check_admin, check_firmware, check_password_policy, get_ap_firmware_versions, get_wlans 
 import re
 from datetime import datetime
 
@@ -115,54 +115,77 @@ def get_pie_chart():
         if not org_id or not validate_org_id(org_id):
             return jsonify({"error": "Invalid organization ID"}), 400
 
-        # Get data and site IDs in one database connection
         with get_db_connection() as db_connection:
             with db_connection.cursor() as cursor:
+                # Get API credentials
                 cursor.execute("SELECT api_key, api_url FROM customer_data WHERE org_id = %s", (org_id,))
                 result = cursor.fetchone()
                 
                 if not result:
                     return jsonify({"error": "API key not found for this organization"}), 404
+
+                # Get latest batch_id  
+                cursor.execute("SELECT batch_id FROM customer_sites WHERE org_id = %s ORDER BY batch_id DESC LIMIT 1", (org_id,))
+                batch_result = cursor.fetchone()
+
+                if not batch_result:
+                    return jsonify({"error": "No batch_id found for this organization"}), 404
                 
-                cursor.execute("SELECT site_id FROM customer_sites WHERE org_id = %s", (org_id,))
-                site_ids = [row[0] for row in cursor.fetchall()]
+                latest_batch_id = batch_result[0]
 
-        encrypted_api_key = result[0]
-        api_url = result[1]
+                # Get scores from latest batch
+                cursor.execute("""
+                    SELECT admin_score, failing_admins, site_firmware_score, site_firmware_failing,
+                           password_policy_score, password_policy_recs, ap_firmware_score, ap_firmware_recs,
+                           wlan_score, wlan_recs, COUNT(*) as site_count
+                    FROM customer_sites 
+                    WHERE org_id = %s AND batch_id = %s
+                    LIMIT 1
+                """, (org_id, latest_batch_id))
 
+                score_result = cursor.fetchone()
+
+                if not score_result:
+                    return jsonify({"error": "No score data available for this batch"}), 404
+
+                # Unpack all fields including JSON fields
+                (admin_score, failing_admins, site_firmware_score, site_firmware_failing, 
+                 password_policy_score, password_policy_recs, ap_firmware_score, ap_firmware_recs, 
+                 wlan_score, wlan_recs, site_count) = score_result
+
+        # FIXED: Parse JSON strings back to objects
         try:
-            api_key = decrypt_api_key(encrypted_api_key)
-        except Exception as e:
-            logger.error(f"Error decrypting API key: {e}")
-            return jsonify({"error": "Failed to decrypt API key"}), 500
+            failing_admins = json.loads(failing_admins) if failing_admins else {}
+            site_firmware_failing = json.loads(site_firmware_failing) if site_firmware_failing else {}
+            password_policy_recs = json.loads(password_policy_recs) if password_policy_recs else {}
+            ap_firmware_recs = json.loads(ap_firmware_recs) if ap_firmware_recs else {}
+            wlan_recs = json.loads(wlan_recs) if wlan_recs else {}
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing JSON data: {e}")
+            # Use empty objects if JSON parsing fails
+            failing_admins = {}
+            site_firmware_failing = {}
+            password_policy_recs = {}
+            ap_firmware_recs = {}
+            wlan_recs = {}
 
-        admin_score, failing_admins = check_admin(site_ids,org_id,api_url, api_key)
-        site_firmware_score, site_firmware_failing = check_firmware(site_ids,org_id,api_url, api_key)
-        password_policy_score, password_policy_recs = check_password_policy(site_ids,org_id,api_url, api_key)
-
-        #print(admin_score, failing_admins)
-        #print(site_firmware_score, site_firmware_failing)
-        #print(password_policy_score, password_policy_recs)
-
-        logger.info(f"Pie chart data requested for org: {org_id}")
-        ap_version_score, ap_version_recs, ap_list = get_ap_firmware_versions(site_ids,org_id,api_url, api_key)
-
-
-
-        json_data = ({
+        json_data = {
             "admin_score": admin_score,
             "failing_admins": failing_admins,
             "site_firmware_score": site_firmware_score,
             "site_firmware_failing": site_firmware_failing,
             "password_policy_score": password_policy_score,
             "password_policy_recs": password_policy_recs,
-            "ap_version_score": ap_version_score,
-            "ap_firmware_recs": ap_version_recs,
-        })
+            "ap_version_score": ap_firmware_score,
+            "ap_firmware_recs": ap_firmware_recs,
+            "wlan_score": wlan_score,
+            "wlan_recs": wlan_recs,
+            "batch_id": latest_batch_id,
+            "site_count": site_count
+        }
 
-        logger.info(json.dumps(json_data))
-
-        return json_data
+        logger.info(f"Pie chart data retrieved from database for org_id: {org_id}, batch_id: {latest_batch_id}")
+        return jsonify(json_data)
     
     except Exception as e:
         logger.error(f"Error in pie-chart endpoint: {e}")
@@ -360,7 +383,8 @@ def insert_customer_data():
             admin_score, failing_admins = check_admin(site_ids, org_id, api_url, api_key)
             site_firmware_score, site_firmware_failing = check_firmware(site_ids, org_id, api_url, api_key)
             password_policy_score, password_policy_recs = check_password_policy(site_ids, org_id, api_url, api_key)
-            ap_version_score, ap_version_recs, ap_list = get_ap_firmware_versions(site_ids,org_id,api_url, api_key)
+            ap_version_score, ap_firmware_recs, ap_list = get_ap_firmware_versions(site_ids,org_id,api_url, api_key)
+            wlan_score, wlan_frame, wlan_recs = get_wlans(site_ids,org_id,api_url, api_key)
 
             # Generate batch ID
             batch_id = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -371,11 +395,12 @@ def insert_customer_data():
                 try:
                     cursor.execute(
                         """
-                        INSERT INTO customer_sites (org_id, site_id, admin_score, site_firmware_score, password_policy_score, ap_firmware_score, batch_id)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO customer_sites (org_id, site_id, admin_score, failing_admins, site_firmware_score, site_firmware_failing, password_policy_score, password_policy_recs, ap_firmware_score, ap_firmware_recs, wlan_score, wlan_recs, batch_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
-                        (org_id, site_id, admin_score, site_firmware_score, password_policy_score, ap_version_score, batch_id)
+                        (org_id, site_id, admin_score, json.dumps(failing_admins), site_firmware_score, json.dumps(site_firmware_failing), password_policy_score, json.dumps(password_policy_recs), ap_version_score, json.dumps(ap_firmware_recs), wlan_score, json.dumps(wlan_recs), batch_id) 
                     )
+                    print(org_id, site_id, admin_score, json.dumps(failing_admins), site_firmware_score, json.dumps(site_firmware_failing), password_policy_score, json.dumps(password_policy_recs), ap_version_score, json.dumps(ap_firmware_recs), wlan_score, json.dumps(wlan_recs), batch_id)
                     sites_inserted += 1
                 except Exception as site_error:
                     logger.error(f"Error inserting site {site_id}: {site_error}")
@@ -401,18 +426,102 @@ def insert_customer_data():
     except requests.exceptions.RequestException as e:
         logger.error(f"Network error during API request: {e}")
         return jsonify({"error": f"Network error: {str(e)}"}), 500
-    except mysql.connector.Error as e:
-        logger.error(f"Database error in /api/data: {e}")
-        return jsonify({"error": f"Database error: {str(e)}"}), 500
-    except Exception as e:
-        logger.error(f"Error in /api/data: {e}")
-        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
     finally:
         if cursor:
             cursor.close()
         if db_connector:
             db_connector.close()
 
+@app.route('/api/fetch-new-data', methods=['POST'])
+def fetch_new_data():
+    db_connector = None
+    cursor = None
+    
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+            
+        org_id = data.get('org_id', '').strip()
+        
+        if not org_id:
+            return jsonify({"error": "Missing org_id parameter"}), 400
+            
+        logger.info(f"Fetch new data request for org_id: {org_id}")
+
+        # Get existing API credentials from database
+        db_connector = get_db_connection()
+        cursor = db_connector.cursor()
+        
+        cursor.execute("SELECT api_key, api_url FROM customer_data WHERE org_id = %s", (org_id,))
+        result = cursor.fetchone()
+        
+        if not result:
+            return jsonify({"error": "No existing API key found. Please configure API settings first."}), 404
+
+        encrypted_api_key, api_url = result
+        api_key = decrypt_api_key(encrypted_api_key)
+
+        # Get existing site IDs
+        cursor.execute("SELECT DISTINCT site_id FROM customer_sites WHERE org_id = %s", (org_id,))
+        site_ids = [row[0] for row in cursor.fetchall()]
+
+        if not site_ids:
+            return jsonify({"error": "No sites found for this organization"}), 404
+
+        # Run fresh security tests
+        admin_score, failing_admins = check_admin(site_ids, org_id, api_url, api_key)
+        site_firmware_score, site_firmware_failing = check_firmware(site_ids, org_id, api_url, api_key)
+        password_policy_score, password_policy_recs = check_password_policy(site_ids, org_id, api_url, api_key)
+        ap_version_score, ap_firmware_recs, ap_list = get_ap_firmware_versions(site_ids, org_id, api_url, api_key)
+        wlan_score, wlan_frame, wlan_recs = get_wlans(site_ids, org_id, api_url, api_key)
+
+        # Generate new batch ID for the refresh
+        batch_id = datetime.now().strftime('%Y%m%d%H%M%S')
+
+        # Insert new batch of site data (keeping historical data)
+        db_connector.autocommit = False
+        sites_updated = 0
+        
+        try:
+            for site_id in site_ids:
+                cursor.execute(
+                    """
+                    INSERT INTO customer_sites (org_id, site_id, admin_score, failing_admins, site_firmware_score, site_firmware_failing, password_policy_score,password_policy_recs, ap_firmware_score, ap_firmware_recs, wlan_score, wlan_recs, batch_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (org_id, site_id, admin_score, json.dumps(failing_admins), site_firmware_score, json.dumps(site_firmware_failing), password_policy_score, json.dumps(password_policy_recs), ap_version_score, ap_firmware_recs, wlan_score, json.dumps(wlan_recs), batch_id)        
+                )
+                sites_updated += 1
+
+            db_connector.commit()
+            logger.info(f"Successfully refreshed data for {sites_updated} sites, batch_id: {batch_id}")
+            
+            return jsonify({
+                "success": True,
+                "message": "Fresh data fetched and stored successfully",
+                "sites_updated": sites_updated,
+                "batch_id": batch_id,
+                "org_id": org_id
+            })
+            
+        except Exception as tx_error:
+            db_connector.rollback()
+            logger.error(f"Transaction error in fetch-new-data: {tx_error}")
+            raise tx_error
+            
+    except mysql.connector.Error as e:
+        logger.error(f"Database error in fetch-new-data: {e}")
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+    except Exception as e:
+        logger.error(f"Error in fetch-new-data: {e}")
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if db_connector:
+            db_connector.close()
 
 @app.route('/api/purge-api-key', methods=['POST'])
 def purge_api_key():
@@ -483,11 +592,10 @@ def purge_api_key():
 @app.route('/api/get-site-id', methods = ['GET'])
 def get_site_id():
     db_connector = None
+    cursor = None
     try: 
 
         org_id = request.args.get('org_id', '').strip()
-
-        print(org_id)
 
         db_connector = get_db_connection()
         cursor = db_connector.cursor()
@@ -496,8 +604,6 @@ def get_site_id():
         cursor.execute(sql, (org_id,))
 
         results = cursor.fetchall()
-
-        print(results)
 
         if not results:
             return jsonify({
@@ -543,7 +649,6 @@ def bad_request(error):
     return jsonify({"error": "Bad request"}), 400
 
 if __name__ == '__main__':
-    # Use environment variables for production configuration
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     host = os.getenv('FLASK_HOST', '127.0.0.1')
     port = int(os.getenv('FLASK_PORT', 8510))

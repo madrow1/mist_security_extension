@@ -23,9 +23,6 @@
             
             <div id="pie-chart">
                 <canvas id="chart-inner"></canvas>
-                <noscript>
-                    <p class="message error">JavaScript is required to view security metrics charts.</p>
-                </noscript>
             </div>
 
             <div id="settings-menu" class="settings-menu" role="tabpanel" aria-labelledby="settings-btn">
@@ -47,18 +44,7 @@
                 <form novalidate>
                     <div class="form-group">
                         <label for="api-input-box">API Key</label>
-                        <input 
-                            class="input-box" 
-                            id="api-input-box" 
-                            type="password"
-                            placeholder="Enter your Mist API key"
-                            autocomplete="off"
-                            spellcheck="false"
-                            aria-describedby="api-key-help"
-                        >
-                        <small id="api-key-help" style="color: #6c757d; font-size: 12px;">
-                            Your API key will be encrypted and stored securely
-                        </small>
+                        <input class="input-box" id="api-input-box" type="password" placeholder="Enter your Mist API key">
                     </div>
                     
                     <button 
@@ -100,6 +86,9 @@
             </button>
             <button class="action-button" data-action="aps" type="button" title="List access points">
                 APs
+            </button>
+            <button class="action-button" data-action="fetch-new" type="button" title="Fetch fresh data">
+                Re-check
             </button>
             <button id="settings-btn" class="action-button" data-action="settings" type="button" title="Configure API settings">
                 Settings

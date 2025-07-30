@@ -37,6 +37,10 @@ const UIUtils = {
     hideLoading(element) {
         if (element) {
             element.style.opacity = '1';
+            // FIXED: Clear loading text
+            if (element.textContent && element.textContent.includes('Loading')) {
+                element.textContent = '';
+            }
         }
     },
 
@@ -365,44 +369,6 @@ const ChartManager = {
     // Chart instance reference for cleanup
     chartInstance: null,
     
-    // Process issue data for tooltips
-    processIssues(issues) {
-        if (!issues) return 'No issues';
-        
-        // Handle array format
-        if (Array.isArray(issues)) {
-            return issues.length > 0 ? issues.join('\n') : 'No issues';
-        }
-        
-        // Handle object format
-        if (typeof issues === 'object') {
-            const entries = Object.entries(issues);
-            if (entries.length === 0) return 'No issues';
-            
-            return entries.map(([key, value]) => {
-                // If value is an array, join its elements
-                if (Array.isArray(value)) {
-                    return `${key}: ${value.join(', ')}`;
-                }
-                // Otherwise, just use the value directly
-                return `${key}: ${value}`;
-            }).join('\n');
-        }
-        
-        // Handle string or other format
-        return String(issues) || 'No issues';
-    },
-
-    // Handle pie chart click - show details
-    handleChartClick(event, chartElements) {
-        if (chartElements.length > 0) {
-            const index = chartElements[0].index;
-            // Display detailed information based on segment clicked
-            alert(`You clicked on segment ${index + 1}`);
-            // You can implement more sophisticated UI here
-        }
-    },
-    
     // Hide chart and clean up
     hideChart() {
         const popupContent = document.getElementById('content-area');
@@ -485,6 +451,7 @@ const ChartManager = {
             // Debug the data being passed to chart
             console.log("Chart data received:", {
                 admin_score: data.admin_score,
+                admin_recs: data.failing_admins,
                 site_firmware_score: data.site_firmware_score,
                 password_policy_score: data.password_policy_score,
                 ap_firmware_score: data.ap_version_score || data.ap_firmware_score
@@ -494,16 +461,17 @@ const ChartManager = {
             this.chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ["Admin Score", "Auto-firmware Upgrade Score", "Password Score", "AP Firmware Score", ""],
+                    labels: ["Admin Score", "Auto-firmware Upgrade Score", "Password Score", "AP Firmware Score", "WLAN Template Score", ""],
                     datasets: [{
                         data: [
                             data.admin_score,
                             data.site_firmware_score,
                             data.password_policy_score,
                             data.ap_version_score,
-                            Math.max(1, 40 - ((data.admin_score || 0) + (data.site_firmware_score || 0) + (data.password_policy_score || 0) + (data.ap_version_score || 0)))
+                            data.wlan_score,
+                            Math.max(1, 50 - ((data.admin_score || 0) + (data.site_firmware_score || 0) + (data.password_policy_score || 0) + (data.ap_version_score || 0) + (data.wlan_score || 0)))
                         ],
-                        backgroundColor: ['#2D6A00', '#84B135', '#0095A9', '#FF6B35', "#FFFFFF"],
+                        backgroundColor: ['#2D6A00', '#84B135', '#0095A9', '#FF6B35','#CCDB2A', '#FFFFFF'],
                         cutout: '60%', // Increased cutout for more center space
                         borderWidth: 3,
                         hoverOffset: 15,
@@ -559,14 +527,84 @@ const ChartManager = {
                                 bottom: 20
                             },
                         },
+                        subtitle: {
+                            display: true,
+                            text: `Batch ID: ${data.batch_id}`,
+                        },
                         tooltip: {
                             callbacks: {
+                                title: function(tooltipItems) {
+                                    const item = tooltipItems[0];
+                                    return item.label || '';
+                                },
                                 label: function(context) {
+                                    const index = context.dataIndex;
                                     const label = context.label || '';
                                     const value = context.parsed || 0;
-                                    return `${label}: ${value}`;
+                                    
+                                    // Don't show tooltip for missing segment
+                                    if (label === "" || label.includes("Missing")) {
+                                        return null;
+                                    }
+                                    
+                                    return `Score: ${value}/10 points`;
+                                },
+                                afterLabel: function(context) {
+                                    const index = context.dataIndex;
+                                    let details = '';
+                                    
+                                    // Add detailed recommendations based on the segment
+                                    switch(index) {
+                                        case 0: // Admin Score
+                                                details = 'Issues found:\n' + Object.entries(data.failing_admins)
+                                                    .map(([admin, issue]) => `• ${admin}: ${issue}`)
+                                                    .join('\n');
+                                            break;
+                                        case 1: // Site Firmware Score
+                                                details = 'Sites with issues:\n' + Object.entries(data.site_firmware_failing)
+                                                    .map(([site, issue]) => `• ${site}: ${issue}`)
+                                                    .join('\n');
+                                            break;
+                                        case 2: // Password Policy Score
+                                                details = 'Recommendations:\n' + Object.entries(data.password_policy_recs)
+                                                    .map(([key, rec]) => `• ${key}: ${rec}`)
+                                                    .join('\n');
+                                            break;
+                                        case 3: // AP Firmware Score
+                                                details = 'AP Firmware Issues:\n' + Object.entries(data.ap_firmware_recs)
+                                                    .map(([serial, rec]) => `• ${serial}: ${rec}`)
+                                                    .join('\n');
+                                            break;
+                                        case 4: // WLAN Score
+                                                details = 'WLAN Recommendations:\n' + Object.entries(data.wlan_recs)
+                                                    .map(([ssid, recs]) => {
+                                                        if (typeof recs === 'object') {
+                                                            return `• ${ssid}:\n  ${Object.values(recs).join('\n  ')}`;
+                                                        }
+                                                        return `• ${ssid}: ${recs}`;
+                                                    })
+                                                    .join('\n');
+                                            break;
+                                        default:
+                                            details = '';
+                                    }
+                                    
+                                    return details;
                                 }
-                            }
+                            },
+                            displayColors: true,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#ddd',
+                            borderWidth: 1,
+                            cornerRadius: 6,
+                            caretPadding: 10,
+                            padding: 12,
+                            maxWidth: 400,
+                            // Allow multiline tooltips
+                            mode: 'nearest',
+                            intersect: false
                         }
                     },
                     onClick: (event, elements) => {
@@ -595,20 +633,23 @@ const ChartManager = {
             return;
         }
 
+        const contentArea = document.getElementById('content-area');
+
         try {
             UIUtils.showLoading(document.getElementById('content-area'));
             const response = await APIClient.sendMessage('pie', { org_id: AppState.org_id });
 
             if (response) {
                 await this.showChart(response);
+                UIUtils.hideLoading(contentArea);
             } else {
                 alert(`Error loading chart data: No data returned`);
-                UIUtils.hideLoading(document.getElementById('content-area'));
+                UIUtils.hideLoading(contentArea);
             }
         } catch (error) {
             console.error('Error handling pie chart:', error);
             alert(`Error: ${error.message}`);
-            UIUtils.hideLoading(document.getElementById('content-area'));
+            UIUtils.hideLoading(contentArea);
         }
     }
 };
@@ -616,7 +657,6 @@ const ChartManager = {
 // Action handlers
 const ActionHandlers = {
     async handleDataAction(action) {
-        const { popupContent } = DOMElements;
         if (!AppState.org_id) {
             UIUtils.showError(popupContent, 'Organization ID not detected. Please navigate to a Mist organization page.');
             return;
@@ -648,6 +688,35 @@ const ActionHandlers = {
             UIUtils.showError(popupContent, error.message);
         } finally {
             UIUtils.hideLoading(popupContent);
+        }
+    },
+
+    async handleFetchNewAction() {
+        if (!AppState.org_id) {
+            alert('Organization ID not detected. Please navigate to a Mist organization page.');
+            return;
+        }
+
+        const contentArea = document.getElementById('content-area'); 
+        
+        try {
+            UIUtils.showLoading(contentArea, 'Fetching fresh data...');
+            
+            // Call fetch-new (backend will get API key from database)
+            const response = await APIClient.sendMessage('fetch-new', { 
+                org_id: AppState.org_id
+            });
+
+            if (response && response.success) { 
+                UIUtils.showSuccess(contentArea, 'Fresh data fetched successfully! Updated security scores are now available.');
+            } else {
+                UIUtils.showError(contentArea, response?.error || 'Failed to fetch fresh data');
+            }
+        } catch (error) {
+            console.error('Error fetching new data:', error);
+            UIUtils.showError(contentArea, error.message);
+        } finally {
+            UIUtils.hideLoading(contentArea);
         }
     },
 
@@ -838,6 +907,11 @@ function setupEventListeners() {
                 ChartManager.hideSettings()
                 // Handle pie chart specifically with caching support
                 //await ChartManager.handlePieChart();
+            } else if (action === 'fetch-new') {
+                ChartManager.hideSettings()
+                await ActionHandlers.handleFetchNewAction();
+                // Handle pie chart specifically with caching support
+                //await ChartManager.handlePieChart();
             } else {
                 // Hide settings menu for non-settings actions
                 if (DOMElements.settingsMenu) {
@@ -873,25 +947,10 @@ window.addEventListener('error', (event) => {
     console.error('Uncaught error:', event.error);
 });
 
-// Debug logging function
-function debug(message, data) {
-    console.log(`[DEBUG] ${message}`, data || '');
-}
-
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
-    // First thing - check if Chart.js is loaded
-    console.log("DOM loaded, Chart.js available:", typeof Chart !== 'undefined');
-    console.log("Chart version:", Chart?.version || "not loaded");
-    
     setupEventListeners();
     
-    // Cache frequently used elements
-    const chartEl = document.getElementById('chart-inner');
-    const popupContent = document.getElementById('content-area');
-    const pieChartContainer = document.getElementById('pie-chart');
-
-    // Initialize tab info
     TabManager.updateTabInfo().catch(error => {
         console.error('Error initializing tab info:', error);
     });
@@ -899,12 +958,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Update data status on popup load
     await ActionHandlers.updateDataStatus();
 });
-
-// Error handling function
-function handleError(context, error, element = null) {
-    console.error(`Error in ${context}:`, error);
-    if (element) UIUtils.showError(element, error.message);
-    return error;
-}
-
-
