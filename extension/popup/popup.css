@@ -7,14 +7,14 @@ body {
     height: 200px; 
     margin: 0;
     padding: 0;
-    overflow: hidden; /* Initially no scrolling needed */
+    overflow: hidden; 
     transition: all 0.3s ease-in-out; /* Smooth resize animation */
 }
 
 /* Body expansion for chart view */
 body.chart-expanded {
-    min-width: 600px;
-    min-height: 500px;
+    min-width: 800px;
+    min-height: 600px;
     height: auto;
     overflow: auto;
 }

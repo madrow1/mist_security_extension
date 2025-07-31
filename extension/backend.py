@@ -10,7 +10,7 @@ from cryptography.fernet import Fernet
 import hashlib
 import secrets
 import requests
-from tests import check_admin, check_firmware, check_password_policy, get_ap_firmware_versions, get_wlans 
+from tests import check_admin, check_firmware, check_password_policy, get_ap_firmware_versions, get_wlans, get_switch_firmware_versions
 import re
 from datetime import datetime
 
@@ -30,7 +30,7 @@ try:
         config = json.load(f)
         
     # Validate required configuration keys
-    required_keys = ['host', 'user', 'password', 'database']
+    required_keys = ['dbAddress', 'dbUser', 'dbPass', 'dbName']
     # keys missing will cause the program to terminate and a log to be created
     missing_keys = [key for key in required_keys if key not in config]
     if missing_keys:
@@ -66,10 +66,10 @@ cipher_suite = Fernet(encryption_key)
 
 # Database connection pool which can then be called throughout the extensions usage
 db_config = {
-    'host': config['host'],
-    'user': config['user'],
-    'password': config['password'],
-    'database': config['database'],
+    'host': config['dbAddress'],
+    'user': config['dbUser'],
+    'password': config['dbPass'],
+    'database': config['dbName'],
     'pool_name': 'mist_pool',
     'pool_size': 16,
     'pool_reset_session': True,
@@ -141,7 +141,7 @@ def get_pie_chart():
                 cursor.execute("""
                     SELECT admin_score, failing_admins, site_firmware_score, site_firmware_failing,
                            password_policy_score, password_policy_recs, ap_firmware_score, ap_firmware_recs,
-                           wlan_score, wlan_recs, COUNT(*) as site_count
+                           wlan_score, wlan_recs, switch_firmware_score, switch_firmware_recs, COUNT(*) as site_count
                     FROM customer_sites 
                     WHERE org_id = %s AND batch_id = %s
                     LIMIT 1
@@ -155,7 +155,7 @@ def get_pie_chart():
                 # Unpack all fields including JSON fields
                 (admin_score, failing_admins, site_firmware_score, site_firmware_failing, 
                  password_policy_score, password_policy_recs, ap_firmware_score, ap_firmware_recs, 
-                 wlan_score, wlan_recs, site_count) = score_result
+                 wlan_score, wlan_recs, switch_firmware_score, switch_firmware_recs, site_count) = score_result
 
         # FIXED: Parse JSON strings back to objects
         try:
@@ -164,6 +164,7 @@ def get_pie_chart():
             password_policy_recs = json.loads(password_policy_recs) if password_policy_recs else {}
             ap_firmware_recs = json.loads(ap_firmware_recs) if ap_firmware_recs else {}
             wlan_recs = json.loads(wlan_recs) if wlan_recs else {}
+            switch_firmware_recs = json.loads(switch_firmware_recs) if switch_firmware_recs else {}
         except json.JSONDecodeError as e:
             logger.error(f"Error parsing JSON data: {e}")
             # Use empty objects if JSON parsing fails
@@ -172,6 +173,7 @@ def get_pie_chart():
             password_policy_recs = {}
             ap_firmware_recs = {}
             wlan_recs = {}
+            switch_firmware_recs = {}
 
         json_data = {
             "admin_score": admin_score,
@@ -180,10 +182,12 @@ def get_pie_chart():
             "site_firmware_failing": site_firmware_failing,
             "password_policy_score": password_policy_score,
             "password_policy_recs": password_policy_recs,
-            "ap_version_score": ap_firmware_score,
+            "ap_firmware_score": ap_firmware_score,
             "ap_firmware_recs": ap_firmware_recs,
             "wlan_score": wlan_score,
             "wlan_recs": wlan_recs,
+            "switch_firmware_score": switch_firmware_score,
+            "switch_firmware_recs": switch_firmware_recs,
             "batch_id": latest_batch_id,
             "site_count": site_count
         }
@@ -201,21 +205,153 @@ def get_histogram():
         org_id = request.args.get('org_id')
         if not org_id or not validate_org_id(org_id):
             return jsonify({"error": "Invalid organization ID"}), 400
-            
-        # TODO: Implement actual histogram data retrieval
-        sample_data = {
-            "labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-            "datasets": [{
-                "label": "Security Incidents",
-                "data": [12, 19, 3, 5, 2, 3],
-                "backgroundColor": "#FF6384"
-            }]
-        }
-        
-        logger.info(f"Histogram data requested for org: {org_id}")
-        return jsonify({"data": sample_data, "status": "success"})
+
+        with get_db_connection() as db_connection:
+            with db_connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT batch_id, admin_score, site_firmware_score, 
+                           password_policy_score, ap_firmware_score, wlan_score, switch_firmware_score,
+                           COUNT(*) as site_count
+                    FROM customer_sites 
+                    WHERE org_id = %s 
+                    GROUP BY batch_id, admin_score, site_firmware_score, 
+                             password_policy_score, ap_firmware_score, wlan_score, switch_firmware_score
+                    ORDER BY batch_id ASC LIMIT 10
+                """, (org_id,))
+
+                results = cursor.fetchall()
+
+                if not results:
+                    return jsonify({"error": "No historical data available for histogram"}), 404
+
+                histogram_data = {
+                    "labels": [],
+                    "admin_scores": [],
+                    "site_firmware_scores": [],
+                    "password_policy_scores": [],
+                    "ap_firmware_scores": [],
+                    "wlan_scores": [],
+                    "switch_firmware_scores": [],
+                    "batch_ids": []
+                }
+
+                for row in results:
+                    batch_id, admin_score, site_firmware_score, password_policy_score, ap_firmware_score, wlan_score, switch_firmware_score, site_count = row
+                    
+                    # Convert batch_id to readable date
+                    try:
+                        batch_date = datetime.strptime(batch_id, '%Y%m%d%H%M%S')
+                        formatted_date = batch_date.strftime('%m/%d %H:%M')
+                    except:
+                        formatted_date = batch_id
+                    
+                    histogram_data["labels"].append(formatted_date)
+                    histogram_data["admin_scores"].append(admin_score or 0)
+                    histogram_data["site_firmware_scores"].append(site_firmware_score or 0)
+                    histogram_data["password_policy_scores"].append(password_policy_score or 0)
+                    histogram_data["ap_firmware_scores"].append(ap_firmware_score or 0)
+                    histogram_data["wlan_scores"].append(wlan_score or 0)
+                    histogram_data["switch_firmware_scores"].append(switch_firmware_score or 0)
+                    histogram_data["batch_ids"].append(batch_id)
+
+                logger.info(f"Histogram data retrieved for org_id: {org_id}, {len(results)} data points")
+                return jsonify(histogram_data)
+    
     except Exception as e:
         logger.error(f"Error in histogram endpoint: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/histogram-site-average', methods=['GET'])
+def get_histogram_site_average():
+    try:
+        org_id = request.args.get('org_id')
+        if not org_id or not validate_org_id(org_id):
+            return jsonify({"error": "Invalid organization ID"}), 400
+
+        with get_db_connection() as db_connection:
+            with db_connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        batch_id,
+                        site_id,
+                        (COALESCE(admin_score, 0) + 
+                         COALESCE(site_firmware_score, 0) + 
+                         COALESCE(password_policy_score, 0) + 
+                         COALESCE(ap_firmware_score, 0) + 
+                         COALESCE(switch_firmware_score, 0) + 
+                         COALESCE(wlan_score, 0)) / 5 as site_average_score
+                    FROM customer_sites 
+                    WHERE org_id = %s 
+                    ORDER BY batch_id ASC, site_id ASC
+                    LIMIT 50
+                """, (org_id,))
+
+                results = cursor.fetchall()
+
+                if not results:
+                    return jsonify({"error": "No historical data available for histogram"}), 404
+
+                sites_data = {}
+                batch_ids = set()
+                
+                for row in results:
+                    batch_id, site_id, site_average_score = row
+                    batch_ids.add(batch_id)
+                    
+                    if site_id not in sites_data:
+                        sites_data[site_id] = {}
+                    
+                    sites_data[site_id][batch_id] = round(site_average_score or 0, 1)
+
+                # Convert batch_ids to sorted list with formatted dates
+                sorted_batch_ids = sorted(batch_ids)
+                labels = []
+                
+                for batch_id in sorted_batch_ids:
+                    try:
+                        batch_date = datetime.strptime(batch_id, '%Y%m%d%H%M%S')
+                        formatted_date = batch_date.strftime('%m/%d %H:%M')
+                    except:
+                        formatted_date = batch_id
+                    labels.append(formatted_date)
+
+                datasets = []
+                colors = [
+                    '#2D6A00', '#84B135', '#0095A9', '#FF6B35', '#CCDB2A',
+                    '#9B59B6', '#E74C3C', '#F39C12', '#16A085', '#8E44AD',
+                    '#3498DB', '#E67E22', '#1ABC9C', '#F1C40F', '#95A5A6'
+                ]
+                
+                for i, (site_id, site_scores) in enumerate(sites_data.items()):
+                    # Create array of scores for this site across all batches
+                    site_score_array = []
+                    for batch_id in sorted_batch_ids:
+                        score = site_scores.get(batch_id, 0)  # Default to 0 if no data
+                        site_score_array.append(score)
+                    
+                    # Truncate site_id for display (show first 8 chars)
+                    display_name = f"Site {site_id[:8]}..."
+                    
+                    dataset = {
+                        "site_id": site_id,
+                        "label": display_name,
+                        "data": site_score_array,
+                        "color": colors[i % len(colors)]
+                    }
+                    datasets.append(dataset)
+
+                histogram_site_data = {
+                    "labels": labels,
+                    "batch_ids": sorted_batch_ids,
+                    "datasets": datasets,
+                    "site_count": len(sites_data)
+                }
+
+                logger.info(f"Per-site histogram data retrieved for org_id: {org_id}, {len(sites_data)} sites, {len(sorted_batch_ids)} time points")
+                return jsonify(histogram_site_data)
+    
+    except Exception as e:
+        logger.error(f"Error in histogram-site-average endpoint: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/api/switch-list', methods=['GET'])
@@ -292,6 +428,180 @@ def check_existing_data():
         logger.error(f"Error checking existing data: {e}")
         return jsonify({"error": "Database error"}), 500
 
+# More secure version that doesn't save passwords to file:
+@app.route('/api/dbconfig', methods=['POST'])  
+def configure_db():
+    db_connector = None
+    cursor = None
+    test_connection = None
+    
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+            
+        # Extract database configuration parameters
+        db_user = data.get('dbUser', '').strip()
+        db_pass = data.get('dbPass', '').strip()
+        db_address = data.get('dbAddress', '').strip()
+        db_port = data.get('dbPort', '').strip()
+        db_name = data.get('dbName', '').strip()
+
+        # Validate required fields
+        if not all([db_user, db_pass, db_address, db_port, db_name]):
+            return jsonify({"error": "All database fields are required"}), 400
+            
+        # Validate port number
+        try:
+            port_number = int(db_port)
+            if port_number < 1 or port_number > 65535:
+                return jsonify({"error": "Invalid port number"}), 400
+        except ValueError:
+            return jsonify({"error": "Port must be a number"}), 400
+        
+        # Validate database name format
+        if not re.match(r'^[a-zA-Z0-9_]+$', db_name):
+            return jsonify({"error": "Invalid database name format"}), 400            
+        
+        logger.info(f"Testing database connection: {db_user}@{db_address}:{port_number}/{db_name}")
+        
+        test_config = {
+            'host': db_address,
+            'user': db_user,
+            'password': db_pass,
+            'database': db_name,
+            'port': port_number,
+            'autocommit': False
+        }
+        
+        try:
+            # Test connection with provided credentials
+            test_connection = mysql.connector.connect(**test_config)
+            test_cursor = test_connection.cursor()
+            
+            # Test basic functionality
+            test_cursor.execute("SELECT 1")
+            test_result = test_cursor.fetchone()
+            
+            if test_result[0] != 1:
+                raise mysql.connector.Error("Connection test failed")
+                
+            logger.info("Database connection test successful")
+            
+            test_connection.autocommit = False
+            
+            # Create customer_data table
+            test_cursor.execute("""
+                CREATE TABLE IF NOT EXISTS `customer_data` (
+                    `org_id` varchar(255) NOT NULL,
+                    `api_key` text DEFAULT NULL,
+                    `api_url` text DEFAULT NULL,
+                    PRIMARY KEY (`org_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """)
+            
+            test_cursor.execute("""
+                CREATE TABLE IF NOT EXISTS `customer_sites` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `org_id` varchar(255) DEFAULT NULL,
+                    `site_id` varchar(255) DEFAULT NULL,
+                    `admin_score` int(11) DEFAULT 0,
+                    `failing_admins` JSON DEFAULT NULL,
+                    `site_firmware_score` int(11) DEFAULT 0,
+                    `site_firmware_failing` JSON DEFAULT NULL,
+                    `password_policy_score` int(11) DEFAULT 0,
+                    `password_policy_recs` JSON DEFAULT NULL,
+                    `ap_firmware_score` int(11) DEFAULT 0,
+                    `ap_firmware_recs` JSON DEFAULT NULL,
+                    `wlan_score` int(11) DEFAULT NULL,
+                    `wlan_recs` JSON DEFAULT NULL,
+                    `switch_firmware_score` int(11) DEFAULT NULL,
+                    `switch_firmware_recs` JSON DEFAULT NULL,
+                    `average_score` int(11) DEFAULT NULL,
+                    `batch_id` varchar(20) DEFAULT NULL,
+                    PRIMARY KEY (`id`),
+                    KEY `org_id` (`org_id`),
+                    KEY `idx_batch_id` (`batch_id`),
+                    CONSTRAINT `customer_sites_ibfk_1` FOREIGN KEY (`org_id`) 
+                        REFERENCES `customer_data` (`org_id`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """)
+            
+            # Commit table creation
+            test_connection.commit()
+            test_cursor.close()
+            test_connection.close()
+            
+            logger.info("Database tables created/verified successfully")
+            
+            global connection_pool, db_config
+            
+            # Update global database configuration
+            new_db_config = {
+                'host': db_address,
+                'user': db_user,
+                'password': db_pass,
+                'database': db_name,
+                'port': port_number,
+                'pool_name': 'mist_pool',
+                'pool_size': 16,
+                'pool_reset_session': True,
+                'autocommit': True
+            }
+            
+            # Create new connection pool with new config
+            try:
+                new_connection_pool = pooling.MySQLConnectionPool(**new_db_config)
+                
+                # Test the new pool
+                test_conn = new_connection_pool.get_connection()
+                test_conn.close()
+                
+                # Replace global pool
+                connection_pool = new_connection_pool
+                db_config = new_db_config
+                
+                logger.info("Database configuration updated successfully")
+                
+            except Exception as pool_error:
+                logger.error(f"Failed to create new connection pool: {pool_error}")
+                raise pool_error
+        
+            return jsonify({
+                "success": True,
+                "message": "Database connected and configured successfully",
+                "config": {
+                    'host': db_address,
+                    'user': db_user,
+                    'database': db_name,
+                    'port': port_number
+                },
+                "tables_created": ["customer_data", "customer_sites"]
+            })
+            
+        except mysql.connector.Error as db_error:
+            logger.error(f"Database connection failed: {db_error}")
+            error_msg = str(db_error)
+            
+            # Provide more specific error messages
+            if "Access denied" in error_msg:
+                return jsonify({"error": "Access denied. Check username and password."}), 401
+            elif "Unknown database" in error_msg:
+                return jsonify({"error": f"Database '{db_name}' does not exist."}), 404
+            elif "Can't connect to MySQL server" in error_msg:
+                return jsonify({"error": f"Cannot connect to MySQL server at {db_address}:{port_number}"}), 503
+            else:
+                return jsonify({"error": f"Database connection failed: {error_msg}"}), 400
+                
+    except Exception as e:
+        logger.error(f"Error in dbconfig endpoint: {e}")
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+    finally:
+        # Cleanup test connection if it exists
+        if test_connection and test_connection.is_connected():
+            test_connection.close()
+
 @app.route('/api/settings', methods=['GET'])
 def get_settings():
     try:
@@ -299,7 +609,42 @@ def get_settings():
     except Exception as e:
         logger.error(f"Error in settings endpoint: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/reset-db-con', methods=['POST'])
+def reset_database_connection():
+    try:
+        backup_file = 'env.copy.json'
+        original_file = 'env.json'
         
+        # Check if backup file exists
+        if not os.path.exists(backup_file):
+            return jsonify({"error": f"Backup file '{backup_file}' not found"}), 404
+        
+        # Load and validate backup configuration
+        with open(backup_file, 'r') as f:
+            backup_config = json.load(f)
+        
+        # Simple validation
+        required_keys = ['dbAddress', 'dbUser', 'dbPass', 'dbName']
+        if not all(key in backup_config for key in required_keys):
+            return jsonify({"error": "Invalid backup configuration"}), 400
+        
+        # Overwrite current configuration
+        with open(original_file, 'w') as f:
+            json.dump(backup_config, f, indent=4)
+        
+        logger.info(f"Database configuration reset from {backup_file}")
+        
+        return jsonify({
+            "success": True,
+            "message": "Database configuration reset successfully",
+            "note": "Application restart required for changes to take effect"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error resetting database configuration: {e}")
+        return jsonify({"error": str(e)}), 500
+    
 # /api/data is called every time the extension wants to input new data to the database. All other functions should read from the database
 # this limits the total number API calls made to Mist and speeds up application response time significantly 
 @app.route('/api/data', methods=['POST'])
@@ -399,12 +744,15 @@ def insert_customer_data():
             admin_score, failing_admins = check_admin(site_ids, org_id, api_url, api_key)
             site_firmware_score, site_firmware_failing = check_firmware(site_ids, org_id, api_url, api_key)
             password_policy_score, password_policy_recs = check_password_policy(site_ids, org_id, api_url, api_key)
-            ap_version_score, ap_firmware_recs, ap_list = get_ap_firmware_versions(site_ids,org_id,api_url, api_key)
+            ap_firmware_score, ap_firmware_recs, ap_list = get_ap_firmware_versions(site_ids,org_id,api_url, api_key)
             wlan_score, wlan_frame, wlan_recs = get_wlans(site_ids,org_id,api_url, api_key)
+            switch_firmware_score, switch_firmware_recs, switch_firmware_frame = get_switch_firmware_versions(site_ids, org_id, api_url, api_key)
 
             # Generate batch ID batch ID is based on the time of creation, so each ID is unique and increments for every time data is requested.
             # This gives us something to ensure that the same data is not shown twice
             batch_id = datetime.now().strftime('%Y%m%d%H%M%S')
+
+            average_score = (admin_score+site_firmware_score+password_policy_score+ap_firmware_score+wlan_score+switch_firmware_score)/6
 
             # Insert site data
             sites_inserted = 0
@@ -413,10 +761,10 @@ def insert_customer_data():
                     # This query has to be updated for each new test added, it adds all site scores and recs to the customer_sites table
                     cursor.execute(
                         """
-                        INSERT INTO customer_sites (org_id, site_id, admin_score, failing_admins, site_firmware_score, site_firmware_failing, password_policy_score, password_policy_recs, ap_firmware_score, ap_firmware_recs, wlan_score, wlan_recs, batch_id)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO customer_sites (org_id, site_id, admin_score, failing_admins, site_firmware_score, site_firmware_failing, password_policy_score, password_policy_recs, ap_firmware_score, ap_firmware_recs, wlan_score, wlan_recs, switch_firmware_score, switch_firmware_recs, average_score, batch_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
-                        (org_id, site_id, admin_score, json.dumps(failing_admins), site_firmware_score, json.dumps(site_firmware_failing), password_policy_score, json.dumps(password_policy_recs), ap_version_score, json.dumps(ap_firmware_recs), wlan_score, json.dumps(wlan_recs), batch_id) 
+                        (org_id, site_id, admin_score, json.dumps(failing_admins), site_firmware_score, json.dumps(site_firmware_failing), password_policy_score, json.dumps(password_policy_recs), ap_firmware_score, json.dumps(ap_firmware_recs), wlan_score, json.dumps(wlan_recs), switch_firmware_score, json.dumps(switch_firmware_recs), average_score, batch_id) 
                     )
                     sites_inserted += 1
                 except Exception as site_error:
@@ -494,8 +842,9 @@ def fetch_new_data():
         admin_score, failing_admins = check_admin(site_ids, org_id, api_url, api_key)
         site_firmware_score, site_firmware_failing = check_firmware(site_ids, org_id, api_url, api_key)
         password_policy_score, password_policy_recs = check_password_policy(site_ids, org_id, api_url, api_key)
-        ap_version_score, ap_firmware_recs, ap_list = get_ap_firmware_versions(site_ids, org_id, api_url, api_key)
+        ap_firmware_score, ap_firmware_recs, ap_list = get_ap_firmware_versions(site_ids, org_id, api_url, api_key)
         wlan_score, wlan_frame, wlan_recs = get_wlans(site_ids, org_id, api_url, api_key)
+        switch_firmware_score, switch_firmware_recs, switch_firmware_frame = get_switch_firmware_versions(site_ids, org_id, api_url, api_key)
 
         # Generate new batch ID for the refresh
         batch_id = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -504,6 +853,8 @@ def fetch_new_data():
         db_connector.autocommit = False
         sites_updated = 0
         
+        average_score = (admin_score+site_firmware_score+password_policy_score+ap_firmware_score+wlan_score+switch_firmware_score)/6
+
         try:
             for site_id in site_ids:
                 cursor.execute(
@@ -512,14 +863,14 @@ def fetch_new_data():
                                                site_firmware_score, site_firmware_failing, 
                                                password_policy_score, password_policy_recs, 
                                                ap_firmware_score, ap_firmware_recs, 
-                                               wlan_score, wlan_recs, batch_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                               wlan_score, wlan_recs, switch_firmware_score, switch_firmware_recs, average_score, batch_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (org_id, site_id, admin_score, json.dumps(failing_admins), 
                      site_firmware_score, json.dumps(site_firmware_failing), 
                      password_policy_score, json.dumps(password_policy_recs), 
-                     ap_version_score, json.dumps(ap_firmware_recs), 
-                     wlan_score, json.dumps(wlan_recs), batch_id)
+                     ap_firmware_score, json.dumps(ap_firmware_recs), 
+                     wlan_score, json.dumps(wlan_recs), switch_firmware_score, json.dumps(switch_firmware_recs), average_score, batch_id)
                 )
                 sites_updated += 1
 

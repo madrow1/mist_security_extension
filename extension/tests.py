@@ -365,10 +365,126 @@ def get_wlans(site_ids, org_id, api_url, token):
     except Exception as e:
         return 0, pd.DataFrame(), {"Exception": f"Error getting WLAN data: {str(e)}"}
     
+def get_switch_firmware_versions(site_ids, org_id, api_url, token):
+    score = 0
+    count = 0
+    switches = {}
+    recomendation = {}
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Token {token}'
+    }
+    params = {'type': 'switch'}
+    dev_data = {}
+
+    # FIXED: Handle both string and tuple formats
+    for site_id in site_ids:
+        # Handle tuple format from database
+        if isinstance(site_id, tuple):
+            site_id = site_id[0]
+        
+        # Validate site_id
+        if not isinstance(site_id, str) or len(site_id) < 10:
+            continue
+
+        try:
+            url = f"https://{api_url}/api/v1/sites/{site_id}/stats/devices"
+            
+            site_settings = requests.get(url, headers=headers, params=params, timeout=10)
+            
+            if site_settings.status_code == 200:
+                data = site_settings.json()
+                
+                for switch in data:
+                    if switch.get('type') == 'switch':  # Only process APs
+                        serial = switch.get('serial')
+                        if serial:
+                            switches[serial] = [
+                                switch.get('model'), 
+                                switch.get('name'), 
+                                switch.get('version'), 
+                                switch.get('site_id')
+                            ]
+                
+        except Exception as e:
+            print(f"Exception fetching AP data for site {site_id}: {e}")
+
+        #data = site_settings.json()
+        #device_data = devices.json()
+
+        #for switch in data:
+        #    for device in device_data:
+        #        switches[switch['serial']] = [switch['model'], switch['name'], switch['version'], switch['site_id'], device['id']]
+
+        #for device in device_data:
+        #    data_types = ['ntp_servers', 'dns_servers', 'dhcp_snooping']
+        #    s_device_data = requests.get("{0}{1}/devices/{2}".format(api_response[0], sites[key], device['id']), headers=headers, params=params)
+        #    dev_data = s_device_data.json()
+            
+            #for dev in dev_data:
+            #    match dev:
+            #        case 'switch_mgmt':
+            #           switches[dev_data['serial']].append(dev_data[dev])
+            #           recomendation[dev_data['serial']] = ["Password should be left blank"]
+            #           count += 1
+                    
+
+
+
+    platforms = {
+        "EX2200": "12.3R12",
+        "EX2200-C": "12.3R12",
+        "EX2300": "23.4R2",
+        "EX2300-C": "23.4R2",
+        "EX2300-MP": "23.4R2",
+        "EX3200": "12.3R12",
+        "EX3300": "12.3R12",
+        "EX3400": "23.4R2",
+        "EX4100": "23.4R2-S4",
+        "EX4100-F": "23.4R2-S4",
+        "EX4100-H": "24.4R1",
+        "EX4200": "12.3R12 / 15.1R7",
+        "EX4300": "21.4R3",
+        "EX4300-MP": "23.4R2",
+        "EX4400": "23.4R2",
+        "EX4400-24X": "23.4R2",
+        "EX4500": "12.3R12 / 15.1R7",
+        "EX4550": "12.3R12 / 15.1R7",
+        "EX4600": "21.4R3",
+        "EX4650": "23.4R2",
+        "EX6200": "12.3R12 / 15.1R7",
+        "EX8200": "12.3R12 / 15.1R7",
+        "EX8200-VC (XRE200)": "12.3R12 / 15.1R7",
+        "EX9200": "23.4R2",
+        "EX9251": "21.4R3",
+        "EX9253": "21.4R3"
+    }
+
+
+    for serial, switch_data in switches.items():
+        model = switch_data[0]
+        current_version = switch_data[2]
+        
+        # Check if the model exists in version_dict and if the current version matches the recommended one
+        recommended_version = platforms.get(model[:8].upper())
+        if current_version[:6] == recommended_version:
+            score += 1
+            count += 1
+        else:
+            recomendation[serial] = (f"Firmware out of date, recommended firmware is {recommended_version}")
+            count += 1
+
+
+
+    final_score = calculate_score_points(score,count)
+
+    return int(final_score), recomendation, switches
+
+
 site_ids = [('7566ff9b-5964-41cc-b8a1-8470f57e05cb',), ('afe42938-3c63-478b-9875-dcdc6e871d81',), ('e6246119-e5d9-4811-b261-f60329210c39',), ('ea8ac722-374a-4b3e-8eae-ffa75ea8fa0b',)]
 api_url = 'api.eu.mist.com'
 org_id = 'c4485ef2-8adf-4ef2-a827-a5b222066271'
 token = 'VBN4QrUIsOjlhfppfqjdhmzlRsmzjORfcY5S0MI61NQGaQrFpCGRQsXvGe3C273i6ksrPqPEYRWkD2YAybcKTgK1vnm1fLzb'
 
-print(check_admin(site_ids,org_id,api_url,token))
-print(get_ap_firmware_versions(site_ids,org_id,api_url,token))
+print(get_switch_firmware_versions(site_ids,org_id,api_url,token))

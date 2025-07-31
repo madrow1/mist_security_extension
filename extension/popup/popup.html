@@ -21,9 +21,18 @@
             
             <div class="popup-content" id="content-area" aria-live="polite">Select an action from the menu below to get started.</div>
             
-            <div id="pie-chart">
+            <div id="pie-chart" style="display: none;">
                 <canvas id="chart-inner"></canvas>
             </div>
+
+            <div id="histo-chart" style="display: none;">
+                <canvas id="histo-inner"></canvas>
+            </div>     
+            
+
+            <div id="histo-average-chart" style="display: none;">
+                <canvas id="histo-average-inner"></canvas>
+            </div>         
 
             <div id="settings-menu" class="settings-menu" role="tabpanel" aria-labelledby="settings-btn">
                 <div class="settings-section">
@@ -109,6 +118,9 @@
             </button>
             <button class="action-button" data-action="histogram" type="button" title="View security trends histogram">
                 Histogram
+            </button>
+            <button class="action-button" data-action="histogram-site-average" type="button" title="View average site trends histogram">
+                Site Averages
             </button>
             <button class="action-button" data-action="switches" type="button" title="List network switches">
                 Switches

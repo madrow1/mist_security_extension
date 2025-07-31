@@ -137,6 +137,10 @@ function buildApiRequest(action, request) {
             endpoint = `${baseUrl}/histogram?org_id=${encodeURIComponent(request.org_id || '')}`;
             fetchOptions.method = 'GET';
             break;
+        case 'histogram-site-average':
+            endpoint = `${baseUrl}/histogram-site-average?org_id=${encodeURIComponent(request.org_id || '')}`;
+            fetchOptions.method = 'GET';
+            break;
         case 'switches':
             endpoint = `${baseUrl}/switch-list?org_id=${encodeURIComponent(request.org_id || '')}`;
             fetchOptions.method = 'GET';
@@ -180,6 +184,23 @@ function buildApiRequest(action, request) {
             fetchOptions.body = JSON.stringify({ 
                 org_id: request.org_id 
             });
+            break;
+        case 'dbconfig':
+            endpoint = `${baseUrl}/dbconfig`;
+            fetchOptions.method = 'POST';
+            fetchOptions.headers = { 'Content-Type': 'application/json' };
+            fetchOptions.body = JSON.stringify({ 
+                dbUser: request.dbUser,
+                dbPass: request.dbPass,
+                dbAddress: request.dbAddress,
+                dbPort: request.dbPort,
+                dbName: request.dbName
+            });
+            break;
+        case 'reset-db-con':
+            endpoint = `${baseUrl}/reset-db-con`;
+            fetchOptions.method = 'POST';
+            fetchOptions.headers = { 'Content-Type': 'application/json' };
             break;
         case 'get-site-id':
             endpoint = `http://${CONFIG.apiAddress}:${CONFIG.apiPort}/api/get-site-id?org_id=${encodeURIComponent(request.org_id)}`;

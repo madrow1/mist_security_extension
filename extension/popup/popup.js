@@ -141,6 +141,17 @@ const SettingsManager = {
         }
     },
 
+    async resetDbConnection(orgId) {
+        try {
+            const response = await APIClient.sendMessage('reset-db-con', { org_id: orgId });
+            console.log(response.siteIds)
+            return response.site_ids || [];
+        } catch (error) {
+            console.error('Error getting site IDs:', error);
+            return [];
+        }
+    },
+
     // Submits API key data for a specific org and 
     async submitApiKey(orgId, apiKey, apiAddress) {
         if (!ValidationUtils.validate(orgId, 'orgId')) {
@@ -159,6 +170,21 @@ const SettingsManager = {
             });
         } catch (error) {
             console.error('Error submitting API key:', error);
+            throw error;
+        }
+    },
+
+    async submitdbConfigKey(dbUser, dbPass, dbAddress, dbPort, dbName) {
+        try {
+            await APIClient.sendMessage('dbconfig', {
+                dbUser: dbUser,
+                dbPass: dbPass,
+                dbAddress: dbAddress,
+                dbPort: dbPort,
+                dbName: dbName
+            });
+        } catch (error) {
+            console.error('Error submitting database configurations:', error);
             throw error;
         }
     },
@@ -373,6 +399,8 @@ const enhancedCenterTextPlugin = {
 const ChartManager = {
     // Chart instance reference for cleanup
     chartInstance: null,
+    histoChartInstance: null, 
+    histoAverageInstance: null,
     
     // Hide chart and clean up, this function can be called from anywhere to hide the pie-chart
     hideChart() {
@@ -406,7 +434,458 @@ const ChartManager = {
             settingsMenuDOM.style.display = 'none';
             }
     },
+
+    hideHistoChart() {
+        const popupContent = document.getElementById('content-area');
+        const histoChartContainer = document.getElementById('histo-chart');
+
+        document.body.classList.remove('chart-expanded');
+        
+        if (histoChartContainer) {
+            histoChartContainer.style.display = 'none';
+            
+            // Destroy the histogram chart instance if it exists
+            if (this.histoChartInstance) {
+                this.histoChartInstance.destroy();
+                this.histoChartInstance = null;
+            }
+        }
+        
+        if (popupContent) {
+            popupContent.style.display = 'block';
+        }
+    },
+
+    hideAverageHistoChart() {
+        const popupContent = document.getElementById('content-area');
+        const histoAverageChartContainer = document.getElementById('histo-average-chart');
+
+        document.body.classList.remove('chart-expanded');
+        
+        if (histoAverageChartContainer) {
+            histoAverageChartContainer.style.display = 'none';
+            
+            // Destroy the histogram chart instance if it exists
+            if (this.histoAverageChartContainer) {
+                this.histoAverageChartContainer.destroy();
+                this.histoAverageChartContainer = null;
+            }
+        }
+        
+        if (popupContent) {
+            popupContent.style.display = 'block';
+        }
+    },
+
+    async showHistoChart(data, isCached = false) {
+        try {
+            const histoChartContainer = document.getElementById('histo-chart');
+            const popupContent = document.getElementById('content-area');
+            
+            // Hide content and show chart container
+            if (popupContent) {
+                popupContent.style.display = 'none';
+            }
+            
+            if (histoChartContainer) {
+                histoChartContainer.style.display = 'block';
+                histoChartContainer.style.width = '700px';
+                histoChartContainer.style.height = '500px';
+                histoChartContainer.style.margin = '0 auto';
+            }
+            
+            // Expand the body
+            document.body.classList.add('chart-expanded');
+            
+            // Force layout recalculation
+            void histoChartContainer.offsetHeight;
+            
+            // Clear and create a fresh canvas
+            histoChartContainer.innerHTML = '<canvas id="histo-inner"></canvas>';
+            
+            // Get the canvas and set explicit dimensions
+            const chartCanvas = document.getElementById('histo-inner');
+            chartCanvas.style.width = '90%';
+            chartCanvas.style.height = '90%';
+            
+            // Give the browser a moment to process the DOM changes
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Get the context
+            const ctx = chartCanvas.getContext('2d');
+            if (!ctx) {
+                console.error("Failed to get canvas context");
+                return;
+            }
+
+            this.histoChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,  
+                    datasets: [
+                        {
+                            label: "Admin Score",
+                            data: data.admin_scores, 
+                            fill: false,
+                            borderColor: '#2D6A00',
+                            backgroundColor: '#2D6A00',
+                            tension: 0.1,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: "Site Firmware Score", 
+                            data: data.site_firmware_scores,
+                            fill: false,
+                            borderColor: '#84B135',
+                            backgroundColor: '#84B135',
+                            tension: 0.1,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: "Password Policy Score",
+                            data: data.password_policy_scores,
+                            fill: false,
+                            borderColor: '#0095A9',
+                            backgroundColor: '#0095A9',
+                            tension: 0.1,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: "AP Firmware Score",
+                            data: data.ap_firmware_scores,
+                            fill: false,
+                            borderColor: '#FF6B35',
+                            backgroundColor: '#FF6B35',
+                            tension: 0.1,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: "WLAN Template Score",
+                            data: data.wlan_scores,
+                            fill: false,
+                            borderColor: '#CCDB2A',
+                            backgroundColor: '#CCDB2A',
+                            tension: 0.1,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: "Switch Firmware Score",
+                            data: data.switch_firmware_score,
+                            fill: false,
+                            borderColor: '#578A1B',
+                            backgroundColor: '#578A1B',
+                            tension: 0.1,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Security Score'
+                            },
+                            min: 0,
+                            max: 10,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Security Scores Over Time',
+                            font: {
+                                size: 18,
+                                weight: 'bold'
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    const index = tooltipItems[0].dataIndex;
+                                    const batchInfo = data.batch_ids && data.batch_ids[index] 
+                                        ? ` (Batch: ${data.batch_ids[index]})` 
+                                        : '';
+                                    return `Time: ${data.labels[index]}${batchInfo}`;
+                                },
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y}/10`;
+                                }
+                            } 
+                        } 
+                    }, 
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                } 
+            });
+            
+        } catch (error) {
+            console.error("Histogram chart creation error:", error);
+            alert(`Histogram chart creation failed: ${error.message}`);
+        }
+    },
     
+    // Fetch and show chart data
+    async handleHistoChart() {
+        if (!AppState.org_id) {
+            alert('Organization ID not detected. Please navigate to a Mist organization page.');
+            return;
+        }
+
+        const contentArea = document.getElementById('content-area');
+
+        try {
+            UIUtils.showLoading(contentArea, 'Loading historical data...');
+            const response = await APIClient.sendMessage('histogram', { org_id: AppState.org_id });
+
+            if (response) {
+                await this.showHistoChart(response);  
+                UIUtils.hideLoading(contentArea);
+            } else {
+                alert(`Error loading histogram data: No data returned`);
+                UIUtils.hideLoading(contentArea);
+            }
+        } catch (error) {
+            console.error('Error handling histogram:', error);
+            alert(`Error: ${error.message}`);
+            UIUtils.hideLoading(contentArea);
+        }
+    },
+
+    async showHistoAverageChart(data, isCached = false) {
+        try {
+            if (!data || !data.labels || !data.datasets) {
+                throw new Error('Invalid per-site histogram data');
+            }
+            
+            const histoChartContainer = document.getElementById('histo-average-chart');
+            const popupContent = document.getElementById('content-area');
+            
+            // Hide content and show chart container
+            if (popupContent) {
+                popupContent.style.display = 'none';
+            }
+            
+            if (histoChartContainer) {
+                histoChartContainer.style.display = 'block';
+                histoChartContainer.style.width = '700px';  
+                histoChartContainer.style.height = '500px'; 
+                histoChartContainer.style.margin = '0 auto';
+            }
+            
+            // Expand the body
+            document.body.classList.add('chart-expanded');
+            
+            // Force layout recalculation
+            void histoChartContainer.offsetHeight;
+            
+            // Clear and create a fresh canvas
+            histoChartContainer.innerHTML = '<canvas id="histo-average-inner"></canvas>';
+            
+            // Get the canvas and set explicit dimensions
+            const chartCanvas = document.getElementById('histo-average-inner');
+            chartCanvas.style.width = '90%';
+            chartCanvas.style.height = '90%';
+            
+            // Give the browser a moment to process the DOM changes
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Get the context
+            const ctx = chartCanvas.getContext('2d');
+            if (!ctx) {
+                console.error("Failed to get canvas context");
+                return;
+            }
+
+            const chartDatasets = data.datasets.map(siteData => ({
+                label: siteData.label,
+                data: siteData.data,
+                fill: false,
+                borderColor: siteData.color,
+                backgroundColor: siteData.color,
+                tension: 0.1,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                borderWidth: 2
+            }));
+
+            this.histoAverageInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: chartDatasets  
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Average Security Score per Site',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        min: 0,
+                        max: 10,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function(value) {
+                                return value + '/10';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: {
+                                size: 10
+                            },
+                            usePointStyle: true,
+                            maxWidth: 80,  
+                            padding: 10
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: `Security Scores per Site Over Time (${data.site_count} sites)`,
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        padding: {
+                            top: 10,
+                            bottom: 20
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#333',
+                        borderWidth: 1,
+                        cornerRadius: 6,
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                const index = tooltipItems[0].dataIndex;
+                                const batchInfo = data.batch_ids && data.batch_ids[index] 
+                                    ? ` (Batch: ${data.batch_ids[index]})` 
+                                    : '';
+                                return `Time: ${data.labels[index]}${batchInfo}`;
+                            },
+                            label: function(context) {
+                                const score = context.parsed.y;
+                                const siteData = data.datasets[context.datasetIndex];
+                                return `${context.dataset.label}: ${score.toFixed(1)}/10`;
+                            },
+                            afterBody: function(tooltipItems) {
+                                return `${tooltipItems.length} sites shown at this time point`;
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                elements: {
+                    point: {
+                        hoverBackgroundColor: '#ffffff',
+                        hoverBorderWidth: 3
+                    },
+                    line: {
+                        tension: 0.1
+                    }
+                }
+            }
+        });
+            
+        } catch (error) {
+            console.error("Per-site histogram chart creation error:", error);
+            alert(`Per-site histogram chart creation failed: ${error.message}`);
+        }
+    },
+    
+    // Fetch and show chart data
+    async handleHistoAverageChart() {
+        if (!AppState.org_id) {
+            alert('Organization ID not detected. Please navigate to a Mist organization page.');
+            return;
+        }
+
+        const contentArea = document.getElementById('content-area');
+
+        try {
+            UIUtils.showLoading(contentArea, 'Loading historical data...');
+            const response = await APIClient.sendMessage('histogram-site-average', { org_id: AppState.org_id });
+
+            if (response) {
+                await this.showHistoAverageChart(response);  
+                UIUtils.hideLoading(contentArea);
+            } else {
+                alert(`Error loading histogram data: No data returned`);
+                UIUtils.hideLoading(contentArea);
+            }
+        } catch (error) {
+            console.error('Error handling histogram:', error);
+            alert(`Error: ${error.message}`);
+            UIUtils.hideLoading(contentArea);
+        }
+    },
+
     // Main method to show chart
     async showChart(data, isCached = false) {
         try {
@@ -421,8 +900,8 @@ const ChartManager = {
             
             if (pieChartContainer) {
                 pieChartContainer.style.display = 'block';
-                pieChartContainer.style.width = '600px';
-                pieChartContainer.style.height = '400px';
+                pieChartContainer.style.width = '700px';
+                pieChartContainer.style.height = '500px';
                 pieChartContainer.style.margin = '0 auto';
             }
             
@@ -437,8 +916,8 @@ const ChartManager = {
             
             // Get the canvas and set explicit dimensions
             const chartCanvas = document.getElementById('chart-inner');
-            chartCanvas.style.width = '100%';
-            chartCanvas.style.height = '100%';
+            chartCanvas.style.width = '90%';
+            chartCanvas.style.height = '90%';
             
             // Give the browser a moment to process the DOM changes
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -450,32 +929,24 @@ const ChartManager = {
                 return;
             }
 
-            // Debug the data being passed to chart
-            //console.log("Chart data received:", {
-            //    admin_score: data.admin_score,
-            //    admin_recs: data.failing_admins,
-            //    site_firmware_score: data.site_firmware_score,
-            //    password_policy_score: data.password_policy_score,
-            //    ap_firmware_score: data.ap_version_score || data.ap_firmware_score
-            //});
-
             // Create chart with center text plugin
             this.chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    // Labels/datasets/backgroundcolour all need to be updated each time a new test is added, the "" initialises an empty label for the white space
-                    labels: ["Admin Score", "Auto-firmware Upgrade Score", "Password Score", "AP Firmware Score", "WLAN Template Score", ""],
+                    // Labels/datasets/backgroundcolour all need to be updated every time a new test is added, the "" initialises an empty label for the white space
+                    labels: ["Admin Score", "Auto-firmware Upgrade Score", "Password Score", "AP Firmware Score", "WLAN Template Score", "Switch Firmware Score", ""],
                     datasets: [{
                         data: [
                             data.admin_score,
                             data.site_firmware_score,
                             data.password_policy_score,
-                            data.ap_version_score,
+                            data.ap_firmware_score,
                             data.wlan_score,
+                            data.switch_firmware_score,
                             // This TODO needs to be updated every time a new test is added
-                            Math.max(1, 50 - ((data.admin_score || 0) + (data.site_firmware_score || 0) + (data.password_policy_score || 0) + (data.ap_version_score || 0) + (data.wlan_score || 0)))
-                        ],
-                        backgroundColor: ['#2D6A00', '#84B135', '#0095A9', '#FF6B35','#CCDB2A', '#FFFFFF'],
+                            Math.max(1, 50 - ((data.admin_score || 0) + (data.site_firmware_score || 0) + (data.password_policy_score || 0) + (data.ap_firmware_score || 0) + (data.wlan_score || 0) +
+                        (data.switch_firmware_score || 0 )))],
+                        backgroundColor: ['#2D6A00', '#84B135', '#0095A9', '#FF6B35','#CCDB2A', '#578A1B', '#FFFFFF'],
                         cutout: '60%', // Increased cutout for more center space
                         borderWidth: 3,
                         hoverOffset: 15,
@@ -589,6 +1060,11 @@ const ChartManager = {
                                                     })
                                                     .join('\n');
                                             break;
+                                        case 5: // Switch Firmware Score
+                                                details = 'Switch Firmware Issues:\n' + Object.entries(data.switch_firmware_recs)
+                                                    .map(([serial, rec]) => `• ${serial}: ${rec}`)
+                                                    .join('\n');
+                                            break;
                                         default:
                                             details = '';
                                     }
@@ -658,6 +1134,8 @@ const ChartManager = {
     }
 };
 
+
+
 // Action handlers
 const ActionHandlers = {
     async handleDataAction(action) {
@@ -722,6 +1200,21 @@ const ActionHandlers = {
         } finally {
             UIUtils.hideLoading(contentArea);
         }
+    },
+
+    async resetDBConn() {
+        await TabManager.updateTabInfo();
+
+        if (!AppState.org_id || !AppState.currentTab?.url) {
+            alert('Organization ID or URL not detected');
+            return;
+        }
+
+        const url = new URL(AppState.currentTab.url);
+        const apiUrl = URLUtils.getApiUrl(url.hostname);
+
+        await SettingsManager.resetDbConnection(AppState.org_id);
+
     },
 
     async handleSettingsAction() {
@@ -797,6 +1290,123 @@ const ActionHandlers = {
         }
     },
     
+    async handledbKeySubmit() {
+        const { dbAddressInput, dbNameInput, dbPassInput, dbPortInput, dbUserInput, dbSubmitButton } = DOMElements;
+
+        // Check if all DOM elements exist
+        if (!dbAddressInput || !dbNameInput || !dbPassInput || !dbPortInput || !dbUserInput) {
+            alert('Database configuration form elements not found');
+            return;
+        }
+
+        // Get values and trim whitespace
+        const dbAddress = dbAddressInput.value.trim();
+        const dbUser = dbUserInput.value.trim();
+        const dbPass = dbPassInput.value.trim();
+        const dbPort = dbPortInput.value.trim();
+        const dbName = dbNameInput.value.trim();
+
+        // Validate the actual values
+        if (!dbAddress || !dbUser || !dbPass || !dbPort || !dbName) {
+            alert('All database fields are required. Please fill in all fields.');
+            return;
+        }
+
+        // Validate port number
+        const portNumber = parseInt(dbPort, 10);
+        if (isNaN(portNumber) || portNumber < 1 || portNumber > 65535) {
+            alert('Please enter a valid port number (1-65535)');
+            return;
+        }
+
+        // Validate database name format
+        if (!/^[a-zA-Z0-9_]+$/.test(dbName)) {
+            alert('Database name can only contain letters, numbers, and underscores');
+            return;
+        }
+
+        // Update tab info to get current context
+        await TabManager.updateTabInfo();
+
+        if (!AppState.org_id || !AppState.currentTab?.url) {
+            alert('Organization ID or URL not detected. Please navigate to a Mist organization page.');
+            return;
+        }
+
+        // Disable the submit button during processing
+        if (dbSubmitButton) {
+            dbSubmitButton.disabled = true;
+            dbSubmitButton.textContent = "Testing Connection...";
+        }
+
+        try {
+            const response = await SettingsManager.submitdbConfigKey(dbUser, dbPass, dbAddress, dbPort, dbName);
+
+            if (response && response.success) {
+                // Show success message
+                const container = dbAddressInput.parentElement;
+                if (container) {
+                    // Remove any existing messages
+                    const existingMsgs = container.querySelectorAll('.db-message');
+                    existingMsgs.forEach(msg => msg.remove());
+                    
+                    // Add success message
+                    const successMsg = document.createElement('p');
+                    successMsg.className = 'db-message db-success-msg paragraphs';
+                    successMsg.style.color = '#2e7d32';
+                    successMsg.style.marginTop = '10px';
+                    
+                    const config = response.config;
+                    if (config) {
+                        successMsg.textContent = `Database connected: ${config.user}@${config.host}:${config.port}/${config.database}`;
+                    } else {
+                        successMsg.textContent = 'Database configuration saved successfully';
+                    }
+                    
+                    container.appendChild(successMsg);
+                }
+                
+                // Clear form fields for security
+                dbPassInput.value = '';
+                
+                // Show global success message
+                SettingsManager.showMessage('Database configuration successful', 'success', 'db-config-msg');
+                
+            } else {
+                throw new Error(response?.error || 'Database configuration failed');
+            }
+
+        } catch (error) {
+            console.error('Database configuration error:', error);
+            
+            // Show error message
+            const container = dbAddressInput.parentElement;
+            if (container) {
+                // Remove any existing messages
+                const existingMsgs = container.querySelectorAll('.db-message');
+                existingMsgs.forEach(msg => msg.remove());
+                
+                // Add error message
+                const errorMsg = document.createElement('p');
+                errorMsg.className = 'db-message db-error-msg paragraphs';
+                errorMsg.style.color = '#d32f2f';
+                errorMsg.style.marginTop = '10px';
+                errorMsg.textContent = `${error.message}`;
+                
+                container.appendChild(errorMsg);
+            }
+            
+            alert('Database configuration failed: ' + error.message);
+            
+        } finally {
+            // Re-enable the submit button
+            if (dbSubmitButton) {
+                dbSubmitButton.disabled = false;
+                dbSubmitButton.textContent = "Test & Save Database Config";
+            }
+        }
+    },
+
     async handleApiKeyPurge() {
         const { purgeBtn } = DOMElements;
 
@@ -856,7 +1466,7 @@ const ActionHandlers = {
     }
 }
 
-// Add this before setupEventListeners function
+// Add this before setupEventListeners function, new TODO eventListeners need to be added every time one is added
 const DOMElements = {
     popupContent: null,
     settingsMenu: null,
@@ -865,7 +1475,12 @@ const DOMElements = {
     siteidElem: null,
     apiInput: null,
     apiSubmitButton: null,
-    purgeBtn: null
+    purgeBtn: null,
+    dbPassInput: null,
+    dbNameInput: null,
+    dbPortInput: null,
+    dbUserInput: null,
+    dbAddressInput: null
 };
 
 // Event listeners setup
@@ -877,7 +1492,13 @@ function setupEventListeners() {
     DOMElements.orgidElem = document.getElementById('org-id');
     DOMElements.siteidElem = document.getElementById('site-id');
     DOMElements.apiInput = document.getElementById('api-input-box');
+    DOMElements.dbPassInput = document.getElementById('db-pass-input');
+    DOMElements.dbAddressInput = document.getElementById('db-address-input');
+    DOMElements.dbPortInput = document.getElementById('db-port-input');
+    DOMElements.dbNameInput = document.getElementById('db-database-input');
+    DOMElements.dbUserInput = document.getElementById('db-user-input');
     DOMElements.apiSubmitButton = document.getElementById('submit-button');
+    DOMElements.dbSubmitButton = document.getElementById('db-submit-button');
     DOMElements.purgeBtn = document.getElementById('purge-api-btn');
     DOMElements.dbMenu = document.getElementById('db-menu');
     const radioButtons = document.querySelectorAll('input[name="db-selection"]');
@@ -892,32 +1513,36 @@ function setupEventListeners() {
             if (action === 'settings') {
                 ChartManager.hideChart()
                 await ActionHandlers.handleSettingsAction();
+                ChartManager.hideHistoChart()
+                ChartManager.hideAverageHistoChart()
             } else if (action === 'pie') {
                 await ChartManager.handlePieChart();
                 ChartManager.hideSettings()
-            //} else if (action === 'export-data') {
-                // Handle data export
-            //    await ActionHandlers.handleDataExport();
+                ChartManager.hideHistoChart()
+                ChartManager.hideAverageHistoChart()
             } else if (action === 'histogram') {
+                await ChartManager.handleHistoChart();
                 ChartManager.hideChart()
                 ChartManager.hideSettings()
-                // Handle pie chart specifically with caching support
-                //await ChartManager.handlePieChart();
+                ChartManager.hideAverageHistoChart()
+            } else if (action === 'histogram-site-average') {
+                await ChartManager.handleHistoAverageChart();
+                ChartManager.hideChart()
+                ChartManager.hideSettings()
+                ChartManager.hideHistoChart()
             } else if (action === 'switches') {
                 ChartManager.hideChart()
                 ChartManager.hideSettings()
-                // Handle pie chart specifically with caching support
-                //await ChartManager.handlePieChart();
+                ChartManager.hideHistoChart()
+                ChartManager.hideAverageHistoChart()
             } else if (action === 'aps') {
                 ChartManager.hideChart()
                 ChartManager.hideSettings()
-                // Handle pie chart specifically with caching support
-                //await ChartManager.handlePieChart();
+                ChartManager.hideHistoChart()
+                ChartManager.hideAverageHistoChart()
             } else if (action === 'fetch-new') {
                 ChartManager.hideSettings()
                 await ActionHandlers.handleFetchNewAction();
-                // Handle pie chart specifically with caching support
-                //await ChartManager.handlePieChart();
             } else {
                 // Hide settings menu for non-settings actions
                 if (DOMElements.settingsMenu) {
@@ -944,6 +1569,7 @@ function setupEventListeners() {
                     DOMElements.dbMenu.style.display = 'block';
                 } else {
                     DOMElements.dbMenu.style.display = 'none';
+                    ActionHandlers.resetDBConn(); 
                 }
             }
         });
@@ -955,6 +1581,10 @@ function setupEventListeners() {
     // API key submit listener
     if (DOMElements.apiSubmitButton) {
         DOMElements.apiSubmitButton.addEventListener('click', ActionHandlers.handleApiKeySubmit);
+    }
+
+    if (DOMElements.dbSubmitButton) {
+        DOMElements.dbSubmitButton.addEventListener('click', ActionHandlers.handledbKeySubmit);
     }
 
     // API key purge listener
