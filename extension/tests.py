@@ -2,6 +2,7 @@ import requests
 import json 
 from datetime import datetime 
 import pandas as pd 
+import xml.etree.ElementTree as ET
 
 # Simplified the scoring system by putting it all in one location and calling it from the end function, reduces the risk of spelling mistakes 
 def calculate_score_points(success_count, total_count):
@@ -482,9 +483,45 @@ def get_switch_firmware_versions(site_ids, org_id, api_url, token):
     return int(final_score), recomendation, switches
 
 
-site_ids = [('7566ff9b-5964-41cc-b8a1-8470f57e05cb',), ('afe42938-3c63-478b-9875-dcdc6e871d81',), ('e6246119-e5d9-4811-b261-f60329210c39',), ('ea8ac722-374a-4b3e-8eae-ffa75ea8fa0b',)]
-api_url = 'api.eu.mist.com'
-org_id = 'c4485ef2-8adf-4ef2-a827-a5b222066271'
-token = 'VBN4QrUIsOjlhfppfqjdhmzlRsmzjORfcY5S0MI61NQGaQrFpCGRQsXvGe3C273i6ksrPqPEYRWkD2YAybcKTgK1vnm1fLzb'
+def application_policies():
+    return 0
 
-print(get_switch_firmware_versions(site_ids,org_id,api_url,token))
+def auth_policies():
+    return 0
+
+def rogue_honeypot_ap_check():
+    return 0 
+
+def get_cve_rss():
+    session = requests.Session()
+    rss_feed = session.get('https://supportportal.juniper.net/knowledgerss?type=Security', verify=False)
+    
+    with open('cve_xml.xml', 'w') as w_cve:
+        w_cve.write(rss_feed.text)
+    w_cve.close()
+
+    session.close()
+
+    return session
+
+def convert_xml_to_json(session):
+    session = get_cve_rss()
+
+    tree = ET.parse('cve_xml.xml')
+    root = tree.getroot()
+
+    session.close()
+
+    print(root)
+
+    #return cve_objects 
+
+
+#site_ids = [('7566ff9b-5964-41cc-b8a1-8470f57e05cb',), ('afe42938-3c63-478b-9875-dcdc6e871d81',), ('e6246119-e5d9-4811-b261-f60329210c39',), ('ea8ac722-374a-4b3e-8eae-ffa75ea8fa0b',)]
+#api_url = 'api.eu.mist.com'
+#org_id = 'c4485ef2-8adf-4ef2-a827-a5b222066271'
+#token = 'VBN4QrUIsOjlhfppfqjdhmzlRsmzjORfcY5S0MI61NQGaQrFpCGRQsXvGe3C273i6ksrPqPEYRWkD2YAybcKTgK1vnm1fLzb'
+
+#print(get_switch_firmware_versions(site_ids,org_id,api_url,token))
+
+convert_xml_to_json(get_cve_rss)

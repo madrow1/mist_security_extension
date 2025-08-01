@@ -1,0 +1,297 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+          
+          
+        <channel>
+          <title>Juniper Security Advisories</title>
+          <description>These are the 40 most recently published articles.</description>
+          <link>https://supportportal.juniper.net/resource/1752853490000/favicon</link>
+          <atom:link href="https://supportportal.juniper.net/knowledgerss?type=Security" rel="self" type="application/rss+xml" /> 
+                <image>
+                    
+                    <url>https://supportportal.juniper.net/resource/1752853490000/favicon</url>
+                    <link>https://supportportal.juniper.net/resource/1752853490000/favicon</link>
+                    
+                    <title>Juniper Security Advisories</title>
+                </image>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: When jflow/sflow is configured continuous logical interface flaps causes rpd crash and restart (CVE-2025-52955)</title>
+              <description></description>
+              <pubDate>Wed, 30 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-When-jflow-sflow-is-enabled-receipt-of-specific-route-updates-causes-rpd-crash-CVE-2025-52955</link>
+              <guid isPermaLink="false">ka0Dp000000jhvbIAA</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS: Specific unknown traffic pattern causes FPC and system to crash when packet capturing is enabled (CVE-2025-52948)</title>
+              <description></description>
+              <pubDate>Wed, 23 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-Specific-unknown-traffic-pattern-causes-FPC-and-system-to-crash-when-packet-capturing-is-enabled-CVE-2025-52948</link>
+              <guid isPermaLink="false">ka0Dp000000jh0aIAA</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: When route validation is enabled, route validation cache connection establishment leads to an rpd crash (CVE-2025-52958)</title>
+              <description></description>
+              <pubDate>Fri, 18 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-When-route-validation-is-enabled-BGP-connection-establishment-failure-causes-RPD-crash-CVE-2025-52958</link>
+              <guid isPermaLink="false">ka0Dp000000jgtyIAA</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS Evolved: When a control-plane firewall filter refers to a prefix-list with more than 10 entries it&apos;s not matching (CVE-2025-52985)</title>
+              <description></description>
+              <pubDate>Fri, 18 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-Evolved-When-a-control-plane-firewall-filter-refers-to-a-prefix-list-with-more-then-10-entries-it-s-not-matching-CVE-2025-52985</link>
+              <guid isPermaLink="false">ka0Dp000000jgbzIAA</guid>
+            </item>
+            <item>
+              <title>2024-09-30 Out of Cycle Security Advisory: Multiple Products: RADIUS protocol susceptible to forgery attacks (Blast-RADIUS) (CVE-2024-3596)</title>
+              <description></description>
+              <pubDate>Tue, 15 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2024-09-30-Out-of-Cycle-Security-Advisory-Multiple-Products-RADIUS-protocol-susceptible-to-forgery-attacks-Blast-RADIUS-CVE-2024-3596</link>
+              <guid isPermaLink="false">ka0Dp000000jgLDIAY</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS: IPv6 firewall filter fails to match payload-protocol (CVE-2025-52951)</title>
+              <description></description>
+              <pubDate>Tue, 15 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-IPv6-firewall-filter-fails-to-match-payload-protocol-CVE-2025-52951</link>
+              <guid isPermaLink="false">ka0Dp000000jgK5IAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: Vulnerability in the RADIUS protocol for Subscriber Management (Blast-RADIUS) (CVE-2024-3596)</title>
+              <description></description>
+              <pubDate>Mon, 14 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-Vulnerability-in-the-RADIUS-protocol-for-Subscriber-Management-Blast-RADIUS-CVE-2024-3596</link>
+              <guid isPermaLink="false">ka0Dp000000jgC6IAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin:Junos OS: SRX Series: Sequence of specific PIM packets causes a flowd crash (CVE-2025-52981)</title>
+              <description></description>
+              <pubDate>Fri, 11 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-SRX-Series-Sequence-of-specific-PIM-packets-causes-a-flowd-crash-CVE-2025-52981</link>
+              <guid isPermaLink="false">ka0Dp000000jg2BIAQ</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS Evolved: A low-privileged user can execute arbitrary Junos commands and modify the configuration, thereby compromising the system (CVE-2025-52954)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-Evolved-A-low-privileged-user-can-execute-CLI-commands-and-modify-the-configuration-compromise-the-system-CVE-2025-52954</link>
+              <guid isPermaLink="false">ka0Dp000000jfvjIAA</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: When a static route points to a reject next-hop and a gNMI query for this route is processed, RPD crashes (CVE-2025-52984)</title>
+              <description></description>
+              <pubDate>Thu, 10 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-When-a-static-route-points-to-an-unreachable-next-hop-and-a-gNMI-query-for-this-route-is-processed-RPD-crashes-CVE-2025-52984</link>
+              <guid isPermaLink="false">ka0Dp000000jfvUIAQ</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: Privilege escalation to root via CLI command &apos;request system logout&apos; (CVE-2025-52988)</title>
+              <description></description>
+              <pubDate>Thu, 10 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-Privilege-escalation-via-CLI-command-request-system-logout-CVE-2025-52988</link>
+              <guid isPermaLink="false">ka0Dp000000jfvKIAQ</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS: ACX Series: When &apos;hot-standby&apos; mode is configured for an L2 circuit, interface flap causes the FEB to crash (CVE-2025-52947)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-ACX-Series-When-hot-standby-mode-is-configured-for-an-L2-circuit-interface-flap-causes-the-FEB-to-crash</link>
+              <guid isPermaLink="false">ka0Dp000000jfqjIAA</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS Evolved: Multiple vulnerabilities resolved for Insecure Implementation of Tunneling Protocols (GRE/IPIP/4in6/6in4) VU#199397</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-Evolved-Multiple-vulnerabilities-resolved-for-Insecure-Implementation-of-Tunneling-Protocols-GRE-IPIP-4in6-6in4-VU-199397</link>
+              <guid isPermaLink="false">ka0Dp000000jfqFIAQ</guid>
+            </item>
+            <item>
+              <title>On Demand: JSA Series: Multiple vulnerabilities resolved in JSA Applications</title>
+              <description></description>
+              <pubDate>Thu, 26 Jun 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/On-Demand-JSA-Series-Multiple-vulnerabilities-resolved-in-JSA-Applications</link>
+              <guid isPermaLink="false">ka0Dp000000jepGIAQ</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS: SRX Series: J-Web can be exposed on additional interfaces (CVE-2025-6549)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-SRX-Series-J-Web-can-be-exposed-on-additional-interfaces-CVE-2025-6549</link>
+              <guid isPermaLink="false">ka0Dp000000jeOAIAY</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: Annotate configuration command can be used for privilege escalation (CVE-2025-52989)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-Annotate-configuration-command-can-be-used-for-privilege-escalation-CVE-2025-52989</link>
+              <guid isPermaLink="false">ka0Dp000000jeO0IAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: When RIB sharding is configured each time a show command is executed RPD memory leaks (CVE-2025-52986)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-When-RIB-sharding-is-configured-each-time-a-show-command-is-executed-RPD-memory-leaks-CVE-2025-52986</link>
+              <guid isPermaLink="false">ka0Dp000000jeNgIAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS: After removing ssh public key authentication root can still log in (CVE-2025-52983)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-After-removing-ssh-public-key-authentication-root-can-still-log-in-CVE-2025-52983</link>
+              <guid isPermaLink="false">ka0Dp000000jeNRIAY</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS: MX Series: When specific SIP packets are processed the MS-MPC will crash (CVE-2025-52982)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-MX-Series-When-specific-SIP-packets-are-processed-the-MS-MPC-will-crash-CVE-2025-52982</link>
+              <guid isPermaLink="false">ka0Dp000000jeNMIAY</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: CTPView: OpenSSH vulnerability CVE-2025-26466 resolved in 9.3R2 release</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-CTPView-OpenSSH-vulnerability-CVE-2025-26466-resolved-in-9-3R2-release</link>
+              <guid isPermaLink="false">ka0Dp000000jeMoIAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS: SRX300 Series: Upon receiving a specific, valid BGP UPDATE message rpd will crash (CVE-2025-52980)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-SRX300-Series-Upon-receiving-a-specific-valid-BGP-UPDATE-message-rpd-will-crash-CVE-2025-52980</link>
+              <guid isPermaLink="false">ka0Dp000000jeN2IAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: Junos OS and Junos OS Evolved: Receipt of a specific BGP UPDATE causes an rpd crash on devices with BGP multipath configured (CVE-2025-52964)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-Junos-OS-and-Junos-OS-Evolved-Receipt-of-a-specific-BGP-UPDATE-causes-an-rpd-crash-on-devices-with-BGP-multipath-configured-CVE-2025-52964</link>
+              <guid isPermaLink="false">ka0Dp000000jeMiIAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS: A low-privileged user can disable an interface (CVE-2025-52963)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-A-low-privileged-user-can-disable-an-interface-CVE-2025-52963</link>
+              <guid isPermaLink="false">ka0Dp000000jeMZIAY</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Juniper Apstra: Multiple Vulnerabilities resolved in Intel-microcode package</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Juniper-Apstra-Multiple-Vulnerabilities-resolved-in-Intel-microcode-package</link>
+              <guid isPermaLink="false">ka0Dp000000jeL6IAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: An unauthenticated adjacent attacker sending a valid BGP UPDATE packet forces a BGP session reset (CVE-2025-52953)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-An-unauthenticated-adjacent-attacker-sending-a-valid-BGP-UPDATE-packet-forces-a-BGP-session-reset-CVE-2025-52953</link>
+              <guid isPermaLink="false">ka0Dp000000jeKNIAY</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS: MX Series with MPC-BUILTIN, MPC 1 through MPC 9: Receipt and processing of a malformed packet causes one or more FPCs to crash (CVE-2025-52952)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-MX-Series-with-MPC-BUILTIN-MPC-1-through-MPC-9-Receipt-and-processing-of-a-malformed-packet-causes-one-or-more-FPCs-to-crash-CVE-2025-52952</link>
+              <guid isPermaLink="false">ka0Dp000000jeKIIAY</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS: Low-privileged user can cause script to run as root, leading to privilege escalation (CVE-2025-30661)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-Low-privileged-user-can-cause-script-to-run-as-root-leading-to-privilege-escalation-CVE-2025-30661</link>
+              <guid isPermaLink="false">ka0Dp000000jeK8IAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Juniper Security Director: Insufficient authorization for multiple endpoints in web interface (CVE-2025-52950)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Juniper-Security-Director-Insufficient-authorization-for-multiple-endpoints-in-web-interface-CVE-2025-52950</link>
+              <guid isPermaLink="false">ka0Dp000000jeJtIAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: In an EVPN environment, receipt of a specifically malformed BGP update causes RPD crash (CVE-2025-52949)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-In-an-EVPN-environment-receipt-of-a-specifically-malformed-BGP-update-causes-RPD-crash-CVE-2025-52949</link>
+              <guid isPermaLink="false">ka0Dp000000jeJjIAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: With traceoptions enabled, receipt of malformed AS PATH causes RPD crash (CVE-2025-52946)</title>
+              <description></description>
+              <pubDate>Wed, 09 Jul 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-With-traceoptions-enabled-receipt-of-malformed-AS-PATH-causes-RPD-crash-CVE-2025-52946</link>
+              <guid isPermaLink="false">ka0Dp000000jeJPIAY</guid>
+            </item>
+            <item>
+              <title>On Demand: JSA Series: Multiple vulnerabilities resolved in Juniper Secure Analytics in 7.5.0 UP11 IF04</title>
+              <description></description>
+              <pubDate>Thu, 29 May 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/On-Demand-JSA-Series-Multiple-vulnerabilities-resolved-in-Juniper-Secure-Analytics-in-7-5-0-UP11-IF03</link>
+              <guid isPermaLink="false">ka0Dp000000jcDoIAI</guid>
+            </item>
+            <item>
+              <title>2024-04 Security Bulletin: Junos OS: If in a scaled CoS scenario information on CoS state is gathered mgd processes get stuck (CVE-2024-21610)</title>
+              <description></description>
+              <pubDate>Mon, 19 May 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2024-04-Security-Bulletin-Junos-OS-MX-Series-In-a-scaled-subscriber-scenario-if-CoS-information-is-gathered-mgd-processes-gets-stuck-CVE-2024-21610</link>
+              <guid isPermaLink="false">ka0Dp000000jb8sIAA</guid>
+            </item>
+            <item>
+              <title>2024-05 Reference Advisory: Junos OS and Junos OS Evolved: Multiple CVEs reported in OpenSSH</title>
+              <description></description>
+              <pubDate>Mon, 12 May 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2024-05-Reference-Advisory-Junos-OS-and-Junos-OS-Evolved-Multiple-CVEs-reported-in-OpenSSH</link>
+              <guid isPermaLink="false">ka0Dp000000jaXDIAY</guid>
+            </item>
+            <item>
+              <title>2025-04 Security Bulletin: Junos OS: MX Series with AFT line card: Subscriber login/logout activity will lead to a memory leak (CVE-2025-30647)</title>
+              <description></description>
+              <pubDate>Tue, 06 May 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-04-Security-Bulletin-Junos-OS-MX-Series-Subscriber-login-logout-activity-will-lead-to-a-memory-leak-CVE-2025-30647</link>
+              <guid isPermaLink="false">ka0Dp000000ja6MIAQ</guid>
+            </item>
+            <item>
+              <title>2025-03 Out-of-Cycle Security Bulletin: Junos OS: A local attacker with shell access can execute arbitrary code (CVE-2025-21590)</title>
+              <description></description>
+              <pubDate>Tue, 06 May 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-03-Out-of-Cycle-Security-Bulletin-Junos-OS-A-local-attacker-with-shell-access-can-execute-arbitrary-code-CVE-2025-21590</link>
+              <guid isPermaLink="false">ka0Dp000000ja5EIAQ</guid>
+            </item>
+            <item>
+              <title>2025-04 Security Bulletin: Junos OS: SRX Series: Transmission of specific control traffic sent out of a DS-Lite tunnel results in flowd crash (CVE-2025-30645)</title>
+              <description></description>
+              <pubDate>Thu, 24 Apr 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-04-Security-Bulletin-Junos-OS-SRX-Series-Transmission-of-specific-control-traffic-sent-out-of-a-DS-Lite-tunnel-results-in-flowd-crash-CVE-2025-30645</link>
+              <guid isPermaLink="false">ka0Dp000000jYuZIAU</guid>
+            </item>
+            <item>
+              <title>2025-04 Security Bulletin: Junos OS and Junos OS Evolved: Executing a specific CLI command when asregex-optimized is configured causes an RPD crash (CVE-2025-30652)</title>
+              <description></description>
+              <pubDate>Tue, 15 Apr 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-04-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-Executing-a-specific-CLI-command-when-asregex-optimized-is-configured-causes-an-RPD-crash-CVE-2025-30652</link>
+              <guid isPermaLink="false">ka0Dp000000jXxSIAU</guid>
+            </item>
+            <item>
+              <title>2025-04 Security Bulletin: Junos OS and Junos OS Evolved: Receipt of a specifically malformed DHCP packet causes jdhcpd process to crash (CVE-2025-30648)</title>
+              <description></description>
+              <pubDate>Tue, 15 Apr 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-04-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-Receipt-of-a-specifically-malformed-DHCP-packet-causes-jdhcpd-process-to-crash-CVE-2025-30648</link>
+              <guid isPermaLink="false">ka0Dp000000jXxDIAU</guid>
+            </item>
+            <item>
+              <title>2025-01 Security Bulletin: Junos Space: Multiple vulnerabilities resolved in 24.1R2 release</title>
+              <description></description>
+              <pubDate>Thu, 10 Apr 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-01-Security-Bulletin-Junos-Space-Multiple-vulnerabilities-resolved-in-24-1R2-release</link>
+              <guid isPermaLink="false">ka0Dp000000jXb2IAE</guid>
+            </item>
+            <item>
+              <title>2025-04 Security Bulletin: Junos OS and Junos OS Evolved: When BGP rib-sharding and update-threading are configured and a peer flaps, an rpd core is observed (CVE-2025-21597)</title>
+              <description></description>
+              <pubDate>Thu, 10 Apr 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-04-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-When-BGP-rib-sharding-and-update-threading-are-configured-and-a-peer-flaps-an-rpd-core-is-observed</link>
+              <guid isPermaLink="false">ka0Dp000000jXaiIAE</guid>
+            </item>
+        </channel>
+      </rss>

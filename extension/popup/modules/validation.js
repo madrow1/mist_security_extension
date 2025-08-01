@@ -21,7 +21,6 @@ export const ValidationUtils = {
         return missing;
     },
 
-    // ✅ IMPROVED: Comprehensive validation with better error handling
     validate(value, type) {
         if (value === null || value === undefined) return false;
         

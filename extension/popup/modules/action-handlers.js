@@ -377,21 +377,19 @@ export const ActionHandlers = {
 
     async resetDBConn() {
         try {
-            const orgValidation = ValidationUtils.validateWithMessage(AppState.org_id, 'orgId', 'Organization ID');
-            if (!orgValidation.valid) {
-                UIUtils.showError(DOMElements.contentArea, orgValidation.message);
-                return;
-            }
-
             UIUtils.showLoading(DOMElements.contentArea, 'Resetting database connection...');
             
-            await SettingsManager.resetDbConnection(AppState.org_id);
+            const response = await APIClient.sendMessage('db-health', {});
             
-            UIUtils.showSuccess(DOMElements.contentArea, 'Database connection reset successfully');
+            if (response?.healthy) {
+                UIUtils.showSuccess(DOMElements.contentArea, 'Database connection is healthy');
+            } else {
+                UIUtils.showError(DOMElements.contentArea, 'Database connection needs attention');
+            }
             
         } catch (error) {
-            console.error('Error resetting database connection:', error);
-            UIUtils.showError(DOMElements.contentArea, `Reset failed: ${error.message}`);
+            console.error('Error checking database health:', error);
+            UIUtils.showError(DOMElements.contentArea, `Database check failed: ${error.message}`);
         } finally {
             UIUtils.hideLoading(DOMElements.contentArea);
         }

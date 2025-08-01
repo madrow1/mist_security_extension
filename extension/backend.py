@@ -10,7 +10,7 @@ from cryptography.fernet import Fernet
 import hashlib
 import secrets
 import requests
-from tests import check_admin, check_firmware, check_password_policy, get_ap_firmware_versions, get_wlans, get_switch_firmware_versions
+from tests import check_admin, check_firmware, check_password_policy, get_ap_firmware_versions, get_wlans, get_switch_firmware_versions, convert_xml_to_json, get_cve_rss
 import re
 from datetime import datetime
 
@@ -93,8 +93,6 @@ def encrypt_api_key(api_key):
 def decrypt_api_key(encrypted_key):
     return cipher_suite.decrypt(encrypted_key.encode()).decode()
 
-# Validates the org_id using regex, not currently in use due to its occasionally returning errors. May use the UUID library for this eventually 
-import re
 # Define regex pattern once at module level
 UUID_PATTERN = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
 
@@ -597,6 +595,15 @@ def configure_db():
             test_connection.close()
 
 @app.route('/api/settings', methods=['GET'])
+def get_settings():
+    try:
+        result = convert_xml_to_json(get_cve_rss)
+        return result
+    except Exception as e:
+        logger.error(f"Error in settings endpoint: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/check-cve-feed', methods=['GET'])
 def get_settings():
     try:
         return jsonify({"message": "Settings retrieved successfully", "status": "success"})
