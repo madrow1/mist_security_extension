@@ -2,6 +2,7 @@ import { DOMElements } from './dom-elements.js';
 import { UIUtils } from './ui-utils.js';             
 import { ChartManager } from './chart-manager.js';  
 import { ActionHandlers } from './action-handlers.js';  
+import { tableManager } from './table-manager.js';
 
 function safeCall(fn, context, ...args) {
     try {
@@ -54,7 +55,7 @@ export function setupEventListeners() {
             } else if (action === 'histogram-site-average') {
                 await ChartManager.handleHistoAverageChart();
             } else if (action === 'switches') {
-                // Handle switches action
+                await tableManager.tableManager();
             } else if (action === 'aps') {
                 // Handle APS action
             } else if (action === 'fetch-new') {

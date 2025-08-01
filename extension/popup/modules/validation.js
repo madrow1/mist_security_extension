@@ -141,7 +141,6 @@ export const ValidationUtils = {
         return sanitized;
     },
 
-    // ✅ ADDED: Validation with detailed error messages
     validateWithMessage(value, type, fieldName = 'Field') {
         const isValid = this.validate(value, type);
         
@@ -176,7 +175,6 @@ export const ValidationUtils = {
         };
     },
 
-    // ✅ ADDED: Bulk validation
     validateMultiple(data, schema) {
         const errors = [];
         
@@ -225,7 +223,6 @@ export const ValidationUtils = {
         return errors;
     },
 
-    // ✅ ADDED: Safe conversion methods
     toInt(value, defaultValue = 0) {
         const num = parseInt(value, 10);
         return isNaN(num) ? defaultValue : num;
@@ -244,14 +241,12 @@ export const ValidationUtils = {
         return Boolean(value);
     },
 
-    // ✅ ADDED: Length validation
     validateLength(value, min = 0, max = Infinity) {
         if (!value) return min === 0;
         const length = value.toString().length;
         return length >= min && length <= max;
     },
 
-    // ✅ ADDED: Common validation schemas
     schemas: {
         apiSubmission: {
             org_id: { required: true, type: 'orgId' },

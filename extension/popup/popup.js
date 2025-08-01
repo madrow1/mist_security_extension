@@ -7,7 +7,7 @@ import { setupEventListeners } from './modules/event-listeners.js';
 import { URLUtils } from './modules/url-utils.js';
 import { UIUtils } from './modules/ui-utils.js';
 import { ValidationUtils } from './modules/validation.js';
-
+import { tableManager } from './modules/table-manager.js';
 // Global error handler
 window.addEventListener('error', (event) => {
     console.error('Uncaught error:', event.error);
