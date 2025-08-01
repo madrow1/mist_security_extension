@@ -39,53 +39,29 @@ export function setupEventListeners() {
 
     actionButtons.forEach(button => {
         button.addEventListener('click', async () => {
-            try {  
-                UIUtils.setButtonClicked(button);
-                const action = button.getAttribute('data-action');
-
-                if (action === 'settings') {
-                    ChartManager.hideChart();
-                    await ActionHandlers.handleSettingsAction();
-                    ChartManager.hideHistoChart();
-                    ChartManager.hideAverageHistoChart();
-                } else if (action === 'pie') {
-                    await ChartManager.handlePieChart();
-                    ChartManager.hideSettings();
-                    ChartManager.hideHistoChart();
-                    ChartManager.hideAverageHistoChart();
-                } else if (action === 'histogram') {
-                    await ChartManager.handleHistoChart();
-                    ChartManager.hideChart();
-                    ChartManager.hideSettings();
-                    ChartManager.hideAverageHistoChart();
-                } else if (action === 'histogram-site-average') {
-                    await ChartManager.handleHistoAverageChart();
-                    ChartManager.hideChart();
-                    ChartManager.hideSettings();
-                    ChartManager.hideHistoChart();
-                } else if (action === 'switches') {
-                    ChartManager.hideChart();
-                    ChartManager.hideSettings();
-                    ChartManager.hideHistoChart();
-                    ChartManager.hideAverageHistoChart();
-                } else if (action === 'aps') {
-                    ChartManager.hideChart();
-                    ChartManager.hideSettings();
-                    ChartManager.hideHistoChart();
-                    ChartManager.hideAverageHistoChart();
-                } else if (action === 'fetch-new') {
-                    ChartManager.hideSettings();
-                    await ActionHandlers.handleFetchNewAction();
-                } else {
-                    // Hide settings menu for non-settings actions
-                    if (DOMElements.settingsMenu) {
-                        DOMElements.settingsMenu.style.display = 'none';
-                    }
-                    await ActionHandlers.handleDataAction(action);
-                }
-            } catch (error) {  
-                console.error(`Error handling action ${action}:`, error);
-                UIUtils.showError(DOMElements.contentArea, `Action failed: ${error.message}`);
+            const action = button.getAttribute('data-action');
+            
+            // Hide all views once
+            ChartManager.hideAllViews();
+            
+            // Show specific view
+            if (action === 'settings') {
+                await ActionHandlers.handleSettingsAction();
+            } else if (action === 'pie') {
+                await ChartManager.handlePieChart();
+            } else if (action === 'histogram') {
+                await ChartManager.handleHistoChart();
+            } else if (action === 'histogram-site-average') {
+                await ChartManager.handleHistoAverageChart();
+            } else if (action === 'switches') {
+                // Handle switches action
+            } else if (action === 'aps') {
+                // Handle APS action
+            } else if (action === 'fetch-new') {
+                await ActionHandlers.handleFetchNewAction();
+            } else {
+                // Handle data action
+                await ActionHandlers.handleDataAction(action);
             }
         });
     });

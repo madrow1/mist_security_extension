@@ -69,7 +69,13 @@ export function initializeDOMElements() {
     }
 }
 
-export function validateDOMElements() {
+let validationCache = null;
+
+export function validateDOMElements(forceRevalidate = false) {
+    if (validationCache && !forceRevalidate) {
+        return validationCache;
+    }
+    
     const missing = [];
     for (const [key, element] of Object.entries(DOMElements)) {
         if (!element) {
@@ -77,10 +83,7 @@ export function validateDOMElements() {
         }
     }
     
-    if (missing.length > 0) {
-        console.warn('Missing DOM elements:', missing);
-    }
-    
+    validationCache = missing;
     return missing;
 }
 

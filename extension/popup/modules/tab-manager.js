@@ -5,15 +5,22 @@ import { SiteManager } from './site-manager.js';
 
 // Tab management
 export const TabManager = {
+    _tabPermissionCache: null,
+
     async checkTabPermissions() {
+        if (this._tabPermissionCache !== null) {
+            return this._tabPermissionCache;
+        }
+        
         try {
-            return new Promise((resolve) => {
+            this._tabPermissionCache = await new Promise((resolve) => {
                 chrome.permissions.contains({
                     permissions: ['tabs']
                 }, (result) => {
                     resolve(result);
                 });
             });
+            return this._tabPermissionCache;
         } catch (error) {
             console.error('Error checking tab permissions:', error);
             return false;
@@ -22,11 +29,6 @@ export const TabManager = {
 
     // IMPROVED: Add error handling and timeout
     async getCurrentTab() {
-        const hasPermission = await this.checkTabPermissions();
-        if (!hasPermission) {
-            throw new Error('Extension does not have tab permissions');
-        }
-
         return new Promise((resolve, reject) => {
             // Add timeout
             const timeout = setTimeout(() => {

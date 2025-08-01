@@ -401,7 +401,7 @@ export const ChartManager = {
                         },
                         title: {
                             display: true,
-                            text: 'Security Average Site Score Over Time',
+                            text: 'Site Average Site Score Over Time',
                             font: {
                                 size: 18,
                                 weight: 'bold'
@@ -719,5 +719,31 @@ export const ChartManager = {
             alert(`Error: ${error.message}`);
             UIUtils.hideLoading(contentArea);
         }
+    },
+
+    // Add to ChartManager
+    destroyAllCharts() {
+        if (this.chartInstance) {
+            this.chartInstance.destroy();
+            this.chartInstance = null;
+        }
+        if (this.histoChartInstance) {
+            this.histoChartInstance.destroy();
+            this.histoChartInstance = null;
+        }
+        if (this.histoAverageInstance) {
+            this.histoAverageInstance.destroy();
+            this.histoAverageInstance = null;
+        }
+    },
+
+    hideAllViews() {
+        this.destroyAllCharts();
+        document.getElementById('pie-chart').style.display = 'none';
+        document.getElementById('histo-chart').style.display = 'none';
+        document.getElementById('histo-average-chart').style.display = 'none';
+        document.getElementById('settings-menu').style.display = 'none';
+        document.getElementById('content-area').style.display = 'block';
+        document.body.classList.remove('chart-expanded');
     }
 };

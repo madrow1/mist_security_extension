@@ -124,21 +124,14 @@ export const UIUtils = {
         }
     },
 
-    setButtonClicked(button) {
-        if (!button) {
-            console.warn('setButtonClicked: button is null or undefined');
-            return;
-        }
+    _activeButton: null,
 
-        try {
-            this.resetButtonStates();
-            
-            if (button.classList) {
-                button.classList.add('clicked');
-            }
-        } catch (error) {
-            console.error('Error setting button clicked state:', error);
+    setButtonClicked(button) {
+        if (this._activeButton) {
+            this._activeButton.classList.remove('clicked');
         }
+        this._activeButton = button;
+        button.classList.add('clicked');
     },
     
     createMessage(text, type = 'info', id = null) {
