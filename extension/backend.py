@@ -208,7 +208,7 @@ def get_histogram():
 
         with get_db_connection() as db_connection:
             with db_connection.cursor() as cursor:
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT batch_id, admin_score, site_firmware_score, 
                            password_policy_score, ap_firmware_score, wlan_score, switch_firmware_score,
                            COUNT(*) as site_count
@@ -354,54 +354,48 @@ def get_histogram_site_average():
         logger.error(f"Error in histogram-site-average endpoint: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
-@app.route('/api/switch-list', methods=['GET'])
+@app.route('/api/switch-ap-list', methods=['GET'])
 def get_switch_list():
     try:
+        # Strips the query parameter from the URL sent from the frontend 
         org_id = request.args.get('org_id')
         if not org_id or not validate_org_id(org_id):
             return jsonify({"error": "Invalid organization ID"}), 400
-            
-        # TODO: Implement actual switch data retrieval from Mist API
-        sample_data = {
-            "switches": [
-                {"id": "sw001", "name": "Main Switch", "status": "online", "security_score": 85},
-                {"id": "sw002", "name": "Branch Switch", "status": "online", "security_score": 72},
-                {"id": "sw003", "name": "Guest Switch", "status": "offline", "security_score": 0}
-            ],
-            "total": 3
-        }
-        
-        logger.info(f"Switch list requested for org: {org_id}")
-        return jsonify({"data": sample_data, "status": "success"})
-    except Exception as e:
-        logger.error(f"Error in switch-list endpoint: {e}")
-        return jsonify({"error": "Internal server error"}), 500
 
-@app.route('/api/ap-list', methods=['GET'])
-def get_ap_list():
-    try:
-        org_id = request.args.get('org_id')
-        if not org_id or not validate_org_id(org_id):
-            return jsonify({"error": "Invalid organization ID"}), 400
-            
-        # TODO: Implement actual AP data retrieval from Mist API
-        sample_data = {
-            "access_points": [
-                {"id": "ap001", "name": "Lobby AP", "status": "online", "security_score": 90},
-                {"id": "ap002", "name": "Conference Room AP", "status": "online", "security_score": 88},
-                {"id": "ap003", "name": "Warehouse AP", "status": "warning", "security_score": 65}
-            ],
-            "total": 3
-        }
-        
-        logger.info(f"AP list requested for org: {org_id}")
-        return jsonify({"data": sample_data, "status": "success"})
-    except Exception as e:
-        logger.error(f"Error in ap-list endpoint: {e}")
-        return jsonify({"error": "Internal server error"}), 500
+        with get_db_connection() as db_connection:
+            with db_connection.cursor() as cursor:
+                # Get API credentials cursor is used to iterate over rows in a database
+                cursor.execute("SELECT api_key, api_url FROM customer_data WHERE org_id = %s", (org_id,))
+                result = cursor.fetchone()
+                
+                if not result:
+                    return jsonify({"error": "API key not found for this organization"}), 404
 
-# This route is only activated if the user clicks on settings. Ideally it would only be activated once. It validates whether or not an org_id string exists in the database already.
-# If the org_id exists then no need for a new API key, else we need an API key to work
+            encrypted_api_key, api_url = result
+            api_key = decrypt_api_key(encrypted_api_key)
+
+                    # Get existing site IDs
+            cursor.execute("SELECT DISTINCT site_id FROM customer_sites WHERE org_id = %s", (org_id,))
+            site_ids = [row[0] for row in cursor.fetchall()]
+
+            if not site_ids:
+                return jsonify({"error": "No sites found for this organization"}), 404
+
+        ap_firmware_score, ap_firmware_recs, ap_frame = get_ap_firmware_versions(site_ids, org_id, api_url, api_key)
+        switch_firmware_score, switch_firmware_recs, switch_firmware_frame = get_switch_firmware_versions(site_ids, org_id, api_url, api_key)
+
+
+        json_data = {
+            "ap_list": ap_frame,
+            "switch_list": switch_firmware_frame,
+        }
+
+        return jsonify(json_data)
+    
+    except Exception as e:
+        logger.error(f"Error in pie-chart endpoint: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+    
 @app.route('/api/check-existing-data', methods=['GET'])
 def check_existing_data():
     org_id = request.args.get('org_id')

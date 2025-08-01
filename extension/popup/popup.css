@@ -13,8 +13,8 @@ body {
 
 /* Body expansion for chart view */
 body.chart-expanded {
-    min-width: 800px;
-    min-height: 600px;
+    min-width: 600px;
+    min-height: 400px;
     height: auto;
     overflow: auto;
 }
@@ -69,9 +69,11 @@ body.chart-expanded {
     box-sizing: border-box;
 }
 
-/* Chart container - single definition */
-#pie-chart {
-    width: 800px;
+/* Chart containers - consistent styling for all charts */
+#pie-chart,
+#histo-chart,
+#histo-average-chart {
+    width: 600px;
     height: 100%;
     position: relative;
     margin: 0;
@@ -80,12 +82,13 @@ body.chart-expanded {
     display: none; /* Initially hidden */
 }
 
-/* Chart canvas - single definition */
-#chart-inner {
-    width: 800px; 
+/* Chart canvas - consistent sizing for all chart types */
+#chart-inner,
+#histo-inner,
+#histo-average-inner {
+    width: 600px; 
     height: 100%;
 }
-
 /* Button bar and action buttons */
 .button-bar {
     display: flex;

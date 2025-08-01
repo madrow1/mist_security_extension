@@ -142,11 +142,11 @@ function buildApiRequest(action, request) {
             fetchOptions.method = 'GET';
             break;
         case 'switches':
-            endpoint = `${baseUrl}/switch-list?org_id=${encodeURIComponent(request.org_id || '')}`;
+            endpoint = `${baseUrl}/switch-ap-list?org_id=${encodeURIComponent(request.org_id || '')}`;
             fetchOptions.method = 'GET';
             break;
         case 'aps':
-            endpoint = `${baseUrl}/ap-list?org_id=${encodeURIComponent(request.org_id || '')}`;
+            endpoint = `${baseUrl}/switch-ap-list?org_id=${encodeURIComponent(request.org_id || '')}`;
             fetchOptions.method = 'GET';
             break;
         case 'settings':

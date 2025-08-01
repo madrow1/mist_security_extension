@@ -24,3 +24,4 @@ plotly.js
 node_modules/
 chart.js/
 test.py
+env.copy.json
