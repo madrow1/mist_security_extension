@@ -470,7 +470,7 @@ export const ChartManager = {
         }
     },
 
-    // Main method to show chart
+    // Main method to show pie chart chart
     async showChart(data, isCached = false) {
         try {
             // First make the container visible
@@ -521,26 +521,55 @@ export const ChartManager = {
             this.chartInstance = new window.Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ["Admin Score", "Auto-firmware Upgrade Score", "Password Score", "AP Firmware Score", "WLAN Template Score", "Switch Firmware Score", ""],
-                    datasets: [{
-                        data: [
-                            data.admin_score,
-                            data.site_firmware_score,
-                            data.password_policy_score,
-                            data.ap_firmware_score,
-                            data.wlan_score,
-                            data.switch_firmware_score,
-                            Math.max(0, 60 - ((data.admin_score || 0) + (data.site_firmware_score || 0) + 
-                                            (data.password_policy_score || 0) + (data.ap_firmware_score || 0) + 
-                                            (data.wlan_score || 0) + (data.switch_firmware_score || 0)))
-                        ],
-                        backgroundColor: ['#2D6A00', '#84B135', '#0095A9', '#FF6B35','#CCDB2A', '#578A1B', '#FFFFFF'],
-                        cutout: '60%',
-                        borderWidth: 3,
-                        hoverOffset: 15,
-                        spacing: 2
-                    }]
-                },
+                    labels: ["Admin Score", "Auto-firmware Upgrade Score", "Password Score", "AP Firmware Score", "WLAN Template Score", "Switch Firmware Score", "Missing Points"],
+                    datasets: [
+                        {
+                            // OUTER RING - Current Data
+                            label: "Current Data",
+                            data: [
+                                data.admin_score,
+                                data.site_firmware_score,
+                                data.password_policy_score,
+                                data.ap_firmware_score,
+                                data.wlan_score,
+                                data.switch_firmware_score,
+                                Math.max(0, 60 - ((data.admin_score || 0) + (data.site_firmware_score || 0) + 
+                                                (data.password_policy_score || 0) + (data.ap_firmware_score || 0) + 
+                                                (data.wlan_score || 0) + (data.switch_firmware_score || 0)))
+                            ],
+                            backgroundColor: ['#2D6A00', '#84B135', '#0095A9', '#FF6B35','#CCDB2A', '#578A1B', '#FFFFFF'],
+                            borderWidth: 3,
+                            hoverOffset: 15,
+                            spacing: 2,
+                            // OUTER RING CONFIGURATION
+                            cutout: '30%',  
+                            radius: '100%'  
+                        },
+                        {
+                            // INNER RING - Previous/Comparison Data
+                            label: "Previous Data",
+                            data: [
+                                data.prev_admin_score || 0,        // Use actual previous data if available
+                                data.prev_site_firmware_score || 0,
+                                data.prev_password_policy_score || 0,
+                                data.prev_ap_firmware_score || 0,
+                                data.prev_wlan_score || 0,
+                                data.prev_switch_firmware_score || 0,
+                                Math.max(0, 60 - ((data.prev_admin_score || 0) + (data.prev_site_firmware_score || 0) + 
+                                                (data.prev_password_policy_score || 0) + (data.prev_ap_firmware_score || 0) + 
+                                                (data.prev_wlan_score || 0) + (data.prev_switch_firmware_score || 0)))
+                            ],
+                            // LIGHTER COLORS for inner ring to show distinction
+                            backgroundColor: ['#4D8A20', '#A4D155', '#20B5C9', '#FF8B55','#ECFB4A', '#77AA3B', '#FFFFFF'],
+                            borderWidth: 2,
+                            hoverOffset: 10,
+                            spacing: 1,
+                            // INNER RING CONFIGURATION
+                            cutout: '50%',  
+                            radius: '90%'   
+                        }
+                    ]
+                }, 
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -556,31 +585,36 @@ export const ChartManager = {
                                 usePointStyle: true,
                                 generateLabels: function(chart) {
                                     const data = chart.data;
-                                    if (data.labels.length && data.datasets.length) {
-                                        return data.labels.map((label, i) => {
+                                    const labels = [];
+                                    
+                                    if (data.labels.length && data.datasets.length > 0) {
+                                        const currentDataset = data.datasets[0]; // Only first dataset
+                                        
+                                        data.labels.forEach((label, i) => {
                                             // Skip the missing segment in legend
-                                            if (label === "Missing Points" || label === "") return null;
+                                            if (label === "Missing Points" || label === "") return;
                                             
-                                            const dataset = data.datasets[0];
-                                            const value = dataset.data[i] || 0;
-                                            return {
-                                                text: `${label}: ${value}/10`,
-                                                fillStyle: dataset.backgroundColor[i],
-                                                strokeStyle: dataset.backgroundColor[i],
+                                            const value = currentDataset.data[i] || 0;
+                                            labels.push({
+                                                text: `${label}: ${value}/10`, 
+                                                fillStyle: currentDataset.backgroundColor[i],
+                                                strokeStyle: currentDataset.backgroundColor[i],
                                                 lineWidth: 0,
                                                 pointStyle: 'circle',
                                                 hidden: false,
+                                                datasetIndex: 0, // Always reference first dataset
                                                 index: i
-                                            };
-                                        }).filter(Boolean); // Remove null entries
+                                            });
+                                        });
                                     }
-                                    return [];
+                                    
+                                    return labels;
                                 }
                             }
                         },
                         title: {
                             display: true,
-                            text: 'Security Audit Scores',
+                            text: 'Security Audit Scores - Current vs Previous',
                             font: {
                                 size: 18,
                                 weight: 'bold'
@@ -588,73 +622,98 @@ export const ChartManager = {
                             padding: {
                                 top: 10,
                                 bottom: 20
-                            },
+                            }
                         },
                         subtitle: {
                             display: true,
-                            text: `Batch ID: ${data.batch_id}`,
+                            text: `Batch ID: ${data.batch_id}${data.previous_batch_id ? ` vs ${data.previous_batch_id}` : ''}`
                         },
                         tooltip: {
                             callbacks: {
                                 title: function(tooltipItems) {
                                     const item = tooltipItems[0];
-                                    return item.label || '';
+                                    const datasetLabel = item.dataset.label;
+                                    return `${datasetLabel}: ${item.label || ''}`;
                                 },
                                 label: function(context) {
                                     const index = context.dataIndex;
                                     const label = context.label || '';
                                     const value = context.parsed || 0;
+                                    const datasetLabel = context.dataset.label;
                                     
                                     // Don't show tooltip for missing segment
                                     if (label === "" || label.includes("Missing")) {
                                         return null;
                                     }
                                     
-                                    return `Score: ${value}/10 points`;
+                                    return `${datasetLabel} Score: ${value}/10 points`;
                                 },
                                 afterLabel: function(context) {
                                     const index = context.dataIndex;
+                                    const datasetIndex = context.datasetIndex;
                                     let details = '';
                                     
-                                    // Add detailed recommendations based on the segment all detail here is drawn from the database for speed
-                                    switch(index) {
-                                        case 0: // Admin Score
-                                                details = 'Issues found:\n' + Object.entries(data.failing_admins)
-                                                    .map(([admin, issue]) => `• ${admin}: ${issue}`)
-                                                    .join('\n');
-                                            break;
-                                        case 1: // Site Firmware Score
-                                                details = 'Sites with issues:\n' + Object.entries(data.site_firmware_failing)
-                                                    .map(([site, issue]) => `• ${site}: ${issue}`)
-                                                    .join('\n');
-                                            break;
-                                        case 2: // Password Policy Score
-                                                details = 'Recommendations:\n' + Object.entries(data.password_policy_recs)
-                                                    .map(([key, rec]) => `• ${key}: ${rec}`)
-                                                    .join('\n');
-                                            break;
-                                        case 3: // AP Firmware Score
-                                                details = 'AP Firmware Issues:\n' + Object.entries(data.ap_firmware_recs)
-                                                    .map(([serial, rec]) => `• ${serial}: ${rec}`)
-                                                    .join('\n');
-                                            break;
-                                        case 4: // WLAN Score
-                                                details = 'WLAN Recommendations:\n' + Object.entries(data.wlan_recs)
-                                                    .map(([ssid, recs]) => {
-                                                        if (typeof recs === 'object') {
-                                                            return `• ${ssid}:\n  ${Object.values(recs).join('\n  ')}`;
-                                                        }
-                                                        return `• ${ssid}: ${recs}`;
-                                                    })
-                                                    .join('\n');
-                                            break;
-                                        case 5: // Switch Firmware Score
-                                                details = 'Switch Firmware Issues:\n' + Object.entries(data.switch_firmware_recs)
-                                                    .map(([serial, rec]) => `• ${serial}: ${rec}`)
-                                                    .join('\n');
-                                            break;
-                                        default:
-                                            details = '';
+                                    // Only show detailed recommendations for current data (outer ring)
+                                    if (datasetIndex === 0) {
+                                        // Add detailed recommendations based on the segment
+                                        switch(index) {
+                                            case 0: // Admin Score
+                                                if (data.failing_admins && Object.keys(data.failing_admins).length > 0) {
+                                                    details = 'Issues found:\n' + Object.entries(data.failing_admins)
+                                                        .map(([admin, issue]) => `• ${admin}: ${issue}`)
+                                                        .join('\n');
+                                                }
+                                                break;
+                                            case 1: // Site Firmware Score
+                                                if (data.site_firmware_failing && Object.keys(data.site_firmware_failing).length > 0) {
+                                                    details = 'Sites with issues:\n' + Object.entries(data.site_firmware_failing)
+                                                        .map(([site, issue]) => `• ${site}: ${issue}`)
+                                                        .join('\n');
+                                                }
+                                                break;
+                                            case 2: // Password Policy Score
+                                                if (data.password_policy_recs && Object.keys(data.password_policy_recs).length > 0) {
+                                                    details = 'Recommendations:\n' + Object.entries(data.password_policy_recs)
+                                                        .map(([key, rec]) => `• ${key}: ${rec}`)
+                                                        .join('\n');
+                                                }
+                                                break;
+                                            case 3: // AP Firmware Score
+                                                if (data.ap_firmware_recs && Object.keys(data.ap_firmware_recs).length > 0) {
+                                                    details = 'AP Firmware Issues:\n' + Object.entries(data.ap_firmware_recs)
+                                                        .map(([serial, rec]) => `• ${serial}: ${rec}`)
+                                                        .join('\n');
+                                                }
+                                                break;
+                                            case 4: // WLAN Score
+                                                if (data.wlan_recs && Object.keys(data.wlan_recs).length > 0) {
+                                                    details = 'WLAN Recommendations:\n' + Object.entries(data.wlan_recs)
+                                                        .map(([ssid, recs]) => {
+                                                            if (typeof recs === 'object') {
+                                                                return `• ${ssid}:\n  ${Object.values(recs).join('\n  ')}`;
+                                                            }
+                                                            return `• ${ssid}: ${recs}`;
+                                                        })
+                                                        .join('\n');
+                                                }
+                                                break;
+                                            case 5: // Switch Firmware Score
+                                                if (data.switch_firmware_recs && Object.keys(data.switch_firmware_recs).length > 0) {
+                                                    details = 'Switch Firmware Issues:\n' + Object.entries(data.switch_firmware_recs)
+                                                        .map(([serial, rec]) => `• ${serial}: ${rec}`)
+                                                        .join('\n');
+                                                }
+                                                break;
+                                            default:
+                                                details = '';
+                                        }
+                                    } else {
+                                        // For previous data, show comparison
+                                        const currentValue = chart.data.datasets[0].data[index] || 0;
+                                        const previousValue = context.parsed || 0;
+                                        const change = currentValue - previousValue;
+                                        const changeText = change > 0 ? `+${change}` : `${change}`;
+                                        details = `Change from previous: ${changeText} points`;
                                     }
                                     
                                     return details;
@@ -670,24 +729,26 @@ export const ChartManager = {
                             caretPadding: 10,
                             padding: 12,
                             maxWidth: 400,
-                            // Allow multiline tooltips
                             mode: 'nearest',
                             intersect: false
                         }
                     },
                     onClick: (event, elements) => {
                         if (elements.length > 0) {
-                            const index = elements[0].index;
-                            const labels = this.chartInstance.data.labels;
-                            const values = this.chartInstance.data.datasets[0].data;
+                            const element = elements[0];
+                            const datasetIndex = element.datasetIndex;
+                            const index = element.index;
+                            const dataset = this.chartInstance.data.datasets[datasetIndex];
+                            const label = this.chartInstance.data.labels[index];
+                            const value = dataset.data[index];
                             
-                            alert(`${labels[index]}: ${values[index]}`);
+                            alert(`${dataset.label} - ${label}: ${value}/10`);
                         }
                     }
-                },
-                plugins: [enhancedCenterTextPlugin] // Register the center text plugin
-            });
-            
+    },
+    plugins: [enhancedCenterTextPlugin] // Register the center text plugin
+});
+    
         } catch (error) {
             console.error("Chart creation error:", error);
             alert(`Chart creation failed: ${error.message}`);
@@ -744,6 +805,7 @@ export const ChartManager = {
         document.getElementById('histo-average-chart').style.display = 'none';
         document.getElementById('settings-menu').style.display = 'none';
         document.getElementById('content-area').style.display = 'block';
+        document.getElementById('table-container').style.display = 'none';
         document.body.classList.remove('chart-expanded');
     }
 };

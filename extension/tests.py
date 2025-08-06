@@ -252,7 +252,7 @@ def get_ap_firmware_versions(site_ids, org_id, api_url, token):
 
     final_score = calculate_score_points(score, count)
     if count > 0:
-        print(f"AP Firmware score: {final_score}% ({score}/{count} APs up to date)")
+        print(f"AP Firmware score: {final_score} ({score}/{count} APs up to date)")
     else:
         final_score = 0
 

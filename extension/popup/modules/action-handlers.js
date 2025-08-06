@@ -162,7 +162,6 @@ export const ActionHandlers = {
             console.log('Parsed hostname:', url.hostname);
             console.log('apiUrl:', apiUrl);
 
-            // ✅ IMPROVED: Show loading state
             UIUtils.showLoading(DOMElements.contentArea, 'Saving API key...');
 
             await SettingsManager.submitApiKey(AppState.org_id, apiKey, apiUrl);
@@ -187,7 +186,6 @@ export const ActionHandlers = {
         }
     },
     
-    // ✅ IMPROVED: Use schema validation and sanitization
     async handleDbKeySubmit() {
         const { dbAddressInput, dbNameInput, dbPassInput, dbPortInput, dbUserInput, dbSubmitButton } = DOMElements;
 
@@ -202,7 +200,6 @@ export const ActionHandlers = {
             return;
         }
 
-        // ✅ IMPROVED: Get and sanitize values
         const rawDbData = {
             dbAddress: dbAddressInput.value,
             dbUser: dbUserInput.value,
@@ -219,7 +216,6 @@ export const ActionHandlers = {
             dbName: ValidationUtils.sanitizeInput(rawDbData.dbName?.trim(), 'alphanumeric')
         };
 
-        // ✅ IMPROVED: Use schema validation
         const validationErrors = ValidationUtils.validateMultiple(dbData, ValidationUtils.schemas.dbConfig);
         
         if (validationErrors.length > 0) {
@@ -228,7 +224,6 @@ export const ActionHandlers = {
             return;
         }
 
-        // ✅ IMPROVED: Additional port validation
         const portNumber = ValidationUtils.toInt(dbData.dbPort);
         if (portNumber < 1 || portNumber > 65535) {
             UIUtils.showError(DOMElements.contentArea, 'Port number must be between 1 and 65535');
@@ -238,7 +233,6 @@ export const ActionHandlers = {
         // Update tab info to get current context
         await TabManager.updateTabInfo();
 
-        // ✅ IMPROVED: Use validation for org check
         const orgValidation = ValidationUtils.validateWithMessage(AppState.org_id, 'orgId', 'Organization ID');
         if (!orgValidation.valid) {
             UIUtils.showError(DOMElements.contentArea, 'Organization ID not detected. Please navigate to a Mist organization page.');
@@ -251,7 +245,6 @@ export const ActionHandlers = {
             dbSubmitButton.textContent = "Testing Connection...";
         }
 
-        // ✅ IMPROVED: Show loading state
         UIUtils.showLoading(DOMElements.contentArea, 'Testing database connection...');
 
         try {
@@ -279,7 +272,6 @@ export const ActionHandlers = {
                     
                     const config = response.config;
                     if (config) {
-                        // ✅ IMPROVED: Sanitize config display
                         const sanitizedConfig = {
                             user: ValidationUtils.sanitizeInput(config.user, 'alphanumeric'),
                             host: ValidationUtils.sanitizeInput(config.host),
@@ -317,11 +309,9 @@ export const ActionHandlers = {
         }
     },
 
-    // ✅ IMPROVED: Better validation and error handling
     async handleApiKeyPurge() {
         const { purgeBtn } = DOMElements;
 
-        // ✅ IMPROVED: Use new validation method
         const orgValidation = ValidationUtils.validateWithMessage(AppState.org_id, 'orgId', 'Organization ID');
         if (!orgValidation.valid) {
             UIUtils.showError(DOMElements.contentArea, orgValidation.message);
@@ -337,7 +327,6 @@ export const ActionHandlers = {
             purgeBtn.textContent = "Purging...";
         }
 
-        // ✅ IMPROVED: Show loading state
         UIUtils.showLoading(DOMElements.contentArea, 'Purging API key...');
 
         try {

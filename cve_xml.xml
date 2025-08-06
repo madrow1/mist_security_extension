@@ -14,6 +14,20 @@
                     <title>Juniper Security Advisories</title>
                 </image>
             <item>
+              <title>2025-08 Reference Advisory: Session Smart Router: Multiple CVEs reported through Qualys scans</title>
+              <description></description>
+              <pubDate>Mon, 04 Aug 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-08-Reference-Advisory-Session-Smart-Router-Multiple-CVEs-reported-through-Qualys-scans</link>
+              <guid isPermaLink="false">ka0Dp000000jiM3IAI</guid>
+            </item>
+            <item>
+              <title>2025-07 Updated Reference Advisory: Junos OS and Junos OS Evolved: Multiple CVEs reported in OpenSSH</title>
+              <description></description>
+              <pubDate>Tue, 05 Aug 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2024-05-Reference-Advisory-Junos-OS-and-Junos-OS-Evolved-Multiple-CVEs-reported-in-OpenSSH</link>
+              <guid isPermaLink="false">ka0Dp000000jiLyIAI</guid>
+            </item>
+            <item>
               <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: When jflow/sflow is configured continuous logical interface flaps causes rpd crash and restart (CVE-2025-52955)</title>
               <description></description>
               <pubDate>Wed, 30 Jul 2025 00:00:00 GMT</pubDate>
@@ -238,13 +252,6 @@
               <guid isPermaLink="false">ka0Dp000000jb8sIAA</guid>
             </item>
             <item>
-              <title>2024-05 Reference Advisory: Junos OS and Junos OS Evolved: Multiple CVEs reported in OpenSSH</title>
-              <description></description>
-              <pubDate>Mon, 12 May 2025 00:00:00 GMT</pubDate>
-              <link>https://supportportal.juniper.net/s/article/2024-05-Reference-Advisory-Junos-OS-and-Junos-OS-Evolved-Multiple-CVEs-reported-in-OpenSSH</link>
-              <guid isPermaLink="false">ka0Dp000000jaXDIAY</guid>
-            </item>
-            <item>
               <title>2025-04 Security Bulletin: Junos OS: MX Series with AFT line card: Subscriber login/logout activity will lead to a memory leak (CVE-2025-30647)</title>
               <description></description>
               <pubDate>Tue, 06 May 2025 00:00:00 GMT</pubDate>
@@ -285,13 +292,6 @@
               <pubDate>Thu, 10 Apr 2025 00:00:00 GMT</pubDate>
               <link>https://supportportal.juniper.net/s/article/2025-01-Security-Bulletin-Junos-Space-Multiple-vulnerabilities-resolved-in-24-1R2-release</link>
               <guid isPermaLink="false">ka0Dp000000jXb2IAE</guid>
-            </item>
-            <item>
-              <title>2025-04 Security Bulletin: Junos OS and Junos OS Evolved: When BGP rib-sharding and update-threading are configured and a peer flaps, an rpd core is observed (CVE-2025-21597)</title>
-              <description></description>
-              <pubDate>Thu, 10 Apr 2025 00:00:00 GMT</pubDate>
-              <link>https://supportportal.juniper.net/s/article/2025-04-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-When-BGP-rib-sharding-and-update-threading-are-configured-and-a-peer-flaps-an-rpd-core-is-observed</link>
-              <guid isPermaLink="false">ka0Dp000000jXaiIAE</guid>
             </item>
         </channel>
       </rss>

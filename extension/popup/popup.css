@@ -70,6 +70,7 @@ body.chart-expanded {
 }
 
 /* Chart containers - consistent styling for all charts */
+#table-container,
 #pie-chart,
 #histo-chart,
 #histo-average-chart {
@@ -80,6 +81,11 @@ body.chart-expanded {
     padding: 15px;
     box-sizing: border-box;
     display: none; /* Initially hidden */
+}
+
+#table-container {
+    width: 700px;
+    font-size: small;
 }
 
 /* Chart canvas - consistent sizing for all chart types */
@@ -292,6 +298,291 @@ button, select {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+.table-header-section {
+    display: block;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.table-title {
+    margin: 0;
+    color: #333;
+    font-size: 24px;
+    font-weight: 600;
+    text-align: left;
+    
+}
+
+.table-item-count {
+    font-size: 16px;
+    color: #666;
+    font-weight: normal;
+    margin-left: 10px;
+}
+
+.table-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.table-search-input {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 250px;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.table-search-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.table-btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    text-transform: none;
+}
+
+.table-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table-btn:active {
+    transform: translateY(0);
+}
+
+.table-btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.table-btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.table-btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.table-btn-success:hover {
+    background-color: #218838;
+}
+
+.table-btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.table-btn-danger:hover {
+    background-color: #c82333;
+}
+
+.table-wrapper {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    background: white;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 14px;
+}
+
+.data-table thead {
+    background-color: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.data-table th {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: background-color 0.2s ease;
+    position: relative;
+}
+
+.data-table th:hover {
+    background-color: #e9ecef;
+}
+
+.data-table th[data-field] {
+    position: relative;
+}
+
+.sort-indicator {
+    margin-left: 6px;
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+.data-table tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #ddd;
+}
+
+.data-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.data-table tbody tr:nth-child(odd) {
+    background-color: white;
+}
+
+.data-table tbody tr:hover {
+    background-color: #e3f2fd !important;
+    transform: scale(1.001);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.data-table td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    word-break: break-word;
+    max-width: 200px;
+    vertical-align: top;
+}
+
+/* Responsive table adjustments */
+@media (max-width: 768px) {
+    .table-header-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+    
+    .table-title {
+        font-size: 20px;
+        text-align: center;
+    }
+    
+    .table-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .table-search-input {
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .table-btn {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+    
+    .data-table {
+        font-size: 12px;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 8px 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .table-container {
+        padding: 10px;
+    }
+    
+    .table-header-section {
+        padding: 15px;
+    }
+    
+    .table-title {
+        font-size: 18px;
+    }
+    
+    .table-item-count {
+        font-size: 14px;
+    }
+    
+    .table-btn {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+    
+    .data-table {
+        font-size: 11px;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 6px 4px;
+        max-width: 120px;
+    }
+}
+
+/* Loading states */
+.table-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    font-size: 16px;
+    color: #6c757d;
+}
+
+.table-loading::before {
+    content: '⟳';
+    display: inline-block;
+    margin-right: 8px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.table-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Focus styles for accessibility */
+.table-search-input:focus,
+.table-btn:focus,
+.data-table th:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
 }
 
 /* Messages */

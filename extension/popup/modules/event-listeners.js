@@ -57,7 +57,7 @@ export function setupEventListeners() {
             } else if (action === 'switches') {
                 await tableManager.showSwitchesTable();
             } else if (action === 'aps') {
-                // Handle APS action
+                await tableManager.showAPsTable();
             } else if (action === 'cve-feed') {
                 // Handle APS action
             } else if (action === 'fetch-new') {

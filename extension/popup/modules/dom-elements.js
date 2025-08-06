@@ -57,7 +57,7 @@ export function initializeDOMElements() {
     DOMElements.pieChart = document.getElementById('pie-chart');
     DOMElements.histoChart = document.getElementById('histo-chart');
     DOMElements.histoAverageChart = document.getElementById('histo-average-chart');
-    
+
     const totalElements = Object.keys(DOMElements).length;
     const foundElements = Object.values(DOMElements).filter(el => el !== null).length;
     console.log(`DOM elements initialized: ${foundElements}/${totalElements} found`);

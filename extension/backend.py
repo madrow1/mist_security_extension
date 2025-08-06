@@ -135,6 +135,11 @@ def get_pie_chart():
                 
                 latest_batch_id = batch_result[0]
 
+                cursor.execute("SELECT batch_id FROM customer_sites WHERE org_id = %s ORDER BY batch_id DESC LIMIT 1 OFFSET 1", (org_id,))
+                prev_batch = cursor.fetchone()
+
+                previous_batch_id = prev_batch[0]
+
                 # Get scores from latest batch TODO this has to be edited for each new test added to the extension.
                 cursor.execute("""
                     SELECT admin_score, failing_admins, site_firmware_score, site_firmware_failing,
@@ -154,6 +159,25 @@ def get_pie_chart():
                 (admin_score, failing_admins, site_firmware_score, site_firmware_failing, 
                  password_policy_score, password_policy_recs, ap_firmware_score, ap_firmware_recs, 
                  wlan_score, wlan_recs, switch_firmware_score, switch_firmware_recs, site_count) = score_result
+                
+                cursor.execute("""
+                    SELECT admin_score, failing_admins, site_firmware_score, site_firmware_failing,
+                           password_policy_score, password_policy_recs, ap_firmware_score, ap_firmware_recs,
+                           wlan_score, wlan_recs, switch_firmware_score, switch_firmware_recs, COUNT(*) as site_count
+                    FROM customer_sites 
+                    WHERE org_id = %s AND batch_id = %s
+                    LIMIT 1
+                """, (org_id, previous_batch_id))
+
+                previous_score_result = cursor.fetchone()
+
+                if not previous_score_result:
+                    return jsonify({"error": "No score data available for this batch"}), 404
+
+                # Unpack all fields including JSON fields
+                (prev_admin_score, prev_failing_admins, prev_site_firmware_score, prev_site_firmware_failing, 
+                 prev_password_policy_score, prev_password_policy_recs, prev_ap_firmware_score, prev_ap_firmware_recs, 
+                 prev_wlan_score, prev_wlan_recs, prev_switch_firmware_score, prev_switch_firmware_recs, site_count) = previous_score_result
 
         # FIXED: Parse JSON strings back to objects
         try:
@@ -163,6 +187,12 @@ def get_pie_chart():
             ap_firmware_recs = json.loads(ap_firmware_recs) if ap_firmware_recs else {}
             wlan_recs = json.loads(wlan_recs) if wlan_recs else {}
             switch_firmware_recs = json.loads(switch_firmware_recs) if switch_firmware_recs else {}
+            prev_failing_admins = json.loads(prev_failing_admins) if prev_failing_admins else {}
+            prev_site_firmware_failing = json.loads(prev_site_firmware_failing) if prev_site_firmware_failing else {}
+            prev_password_policy_recs = json.loads(prev_password_policy_recs) if prev_password_policy_recs else {}
+            prev_ap_firmware_recs = json.loads(prev_ap_firmware_recs) if prev_ap_firmware_recs else {}
+            prev_wlan_recs = json.loads(prev_wlan_recs) if wlan_recs else {}
+            prev_switch_firmware_recs = json.loads(prev_switch_firmware_recs) if prev_switch_firmware_recs else {}
         except json.JSONDecodeError as e:
             logger.error(f"Error parsing JSON data: {e}")
             # Use empty objects if JSON parsing fails
@@ -172,6 +202,12 @@ def get_pie_chart():
             ap_firmware_recs = {}
             wlan_recs = {}
             switch_firmware_recs = {}
+            prev_failing_admins = {}
+            prev_site_firmware_failing = {}
+            prev_password_policy_recs = {}
+            prev_ap_firmware_recs = {}
+            prev_wlan_recs = {}
+            prev_switch_firmware_recs = {}
 
         json_data = {
             "admin_score": admin_score,
@@ -187,6 +223,20 @@ def get_pie_chart():
             "switch_firmware_score": switch_firmware_score,
             "switch_firmware_recs": switch_firmware_recs,
             "batch_id": latest_batch_id,
+            "site_count": site_count,
+            "prev_admin_score": prev_admin_score,
+            "prev_failing_admins": prev_failing_admins,
+            "prev_site_firmware_score": prev_site_firmware_score,
+            "prev_site_firmware_failing": prev_site_firmware_failing,
+            "prev_password_policy_score": prev_password_policy_score,
+            "prev_password_policy_recs": prev_password_policy_recs,
+            "prev_ap_firmware_score": prev_ap_firmware_score,
+            "prev_ap_firmware_recs": prev_ap_firmware_recs,
+            "prev_wlan_score": prev_wlan_score,
+            "prev_wlan_recs": prev_wlan_recs,
+            "prev_switch_firmware_score": prev_switch_firmware_score,
+            "prev_switch_firmware_recs": prev_switch_firmware_recs,
+            "prev_batch_id": previous_batch_id,
             "site_count": site_count
         }
 
@@ -355,43 +405,69 @@ def get_histogram_site_average():
 @app.route('/api/switch-ap-list', methods=['GET'])
 def get_switch_list():
     try:
-        # Strips the query parameter from the URL sent from the frontend 
+        # Get org_id from query parameters
         org_id = request.args.get('org_id')
         if not org_id or not validate_org_id(org_id):
             return jsonify({"error": "Invalid organization ID"}), 400
 
         with get_db_connection() as db_connection:
             with db_connection.cursor() as cursor:
-                # Get API credentials cursor is used to iterate over rows in a database
+                # Get API credentials
                 cursor.execute("SELECT api_key, api_url FROM customer_data WHERE org_id = %s", (org_id,))
                 result = cursor.fetchone()
                 
                 if not result:
                     return jsonify({"error": "API key not found for this organization"}), 404
 
-            encrypted_api_key, api_url = result
-            api_key = decrypt_api_key(encrypted_api_key)
+                encrypted_api_key, api_url = result
+                api_key = decrypt_api_key(encrypted_api_key)
 
-                    # Get existing site IDs
-            cursor.execute("SELECT DISTINCT site_id FROM customer_sites WHERE org_id = %s", (org_id,))
-            site_ids = [row[0] for row in cursor.fetchall()]
+                cursor.execute("SELECT DISTINCT site_id FROM customer_sites WHERE org_id = %s", (org_id,))
+                site_results = cursor.fetchall()
+                
+                if not site_results:
+                    return jsonify({"error": "No sites found for this organization"}), 404
+                
+                site_ids = [row[0] for row in site_results]
 
-            if not site_ids:
-                return jsonify({"error": "No sites found for this organization"}), 404
+        try:
+            ap_firmware_score, ap_firmware_recs, ap_frame = get_ap_firmware_versions(site_ids, org_id, api_url, api_key)
+            
+            if ap_frame is None:
+                logger.warning(f"get_ap_firmware_versions returned None for org_id: {org_id}")
+                ap_frame = {}
+                
+        except Exception as ap_error:
+            logger.error(f"Error getting AP firmware data: {ap_error}")
+            ap_frame = {}
 
-        ap_firmware_score, ap_firmware_recs, ap_frame = get_ap_firmware_versions(site_ids, org_id, api_url, api_key)
-        switch_firmware_score, switch_firmware_recs, switch_firmware_frame = get_switch_firmware_versions(site_ids, org_id, api_url, api_key)
+        try:
+            switch_firmware_score, switch_firmware_recs, switch_firmware_frame = get_switch_firmware_versions(site_ids, org_id, api_url, api_key)
+            
+            if switch_firmware_frame is None:
+                logger.warning(f"get_switch_firmware_versions returned None for org_id: {org_id}")
+                switch_firmware_frame = {}
+                
+        except Exception as switch_error:
+            logger.error(f"Error getting switch firmware data: {switch_error}")
+            switch_firmware_frame = {}
 
-
+        # Prepare response data
         json_data = {
             "ap_list": ap_frame,
             "switch_list": switch_firmware_frame,
+            "org_id": org_id,
+            "site_count": len(site_ids)
         }
 
+        logger.info(f"Switch-AP list {json_data} retrieved for org_id: {org_id}, {len(site_ids)} sites")
         return jsonify(json_data)
     
+    except mysql.connector.Error as db_error:
+        logger.error(f"Database error in switch-ap-list endpoint: {db_error}")
+        return jsonify({"error": f"Database error: {str(db_error)}"}), 500
     except Exception as e:
-        logger.error(f"Error in pie-chart endpoint: {e}")
+        logger.error(f"Error in switch-ap-list endpoint: {e}")
         return jsonify({"error": "Internal server error"}), 500
     
 @app.route('/api/check-existing-data', methods=['GET'])
@@ -420,7 +496,6 @@ def check_existing_data():
         logger.error(f"Error checking existing data: {e}")
         return jsonify({"error": "Database error"}), 500
 
-# More secure version that doesn't save passwords to file:
 @app.route('/api/dbconfig', methods=['POST'])  
 def configure_db():
     db_connector = None
@@ -604,7 +679,7 @@ def get_settings():
         return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/api/check-cve-feed', methods=['GET'])
-def get_settings():
+def get_cve_feed():
     try:
         return jsonify({"message": "Settings retrieved successfully", "status": "success"})
     except Exception as e:

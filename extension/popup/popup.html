@@ -2,7 +2,6 @@
 <html lang="en">
     <head>
         <script src="../libs/chart.min.js"></script>
-        <script src="../libs/tabulator_esm.min.js"></script>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="description" content="Mist Security Audit Tool - Browser Extension">
@@ -34,6 +33,33 @@
                 <canvas id="histo-average-inner"></canvas>
             </div>         
 
+            <!-- Table Container (Hidden by default) - FIXED IDs and structure -->
+            <div id="table-container" class="table-container" style="display: none;">
+                <div class="table-header-section">
+                    <h2 id="table-title" class="table-title">Data Table</h2>
+                    <h3></h3>
+                    
+                    <div class="table-controls">
+                        <input type="text" id="table-search" class="table-search-input" placeholder="Search all columns...">
+                        <button id="clear-search-btn" class="table-btn table-btn-secondary">Clear</button>
+                        <button id="export-csv-btn" class="table-btn table-btn-success">Export CSV</button>
+                        <button id="close-table-btn" class="table-btn table-btn-danger">Close</button>
+                    </div>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table id="data-table" class="data-table">
+                        <thead id="table-head">
+                            <!-- Table headers will be inserted here -->
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Table rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Settings Menu - PROPERLY CLOSED -->
             <div id="settings-menu" class="settings-menu" role="tabpanel" aria-labelledby="settings-btn">
                 <div class="settings-section">
                     <h3>API Configuration</h3>
