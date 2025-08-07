@@ -14,6 +14,13 @@
                     <title>Juniper Security Advisories</title>
                 </image>
             <item>
+              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: When jflow/sflow is configured continuous logical interface flaps causes rpd crash and restart (CVE-2025-52955)</title>
+              <description></description>
+              <pubDate>Thu, 07 Aug 2025 00:00:00 GMT</pubDate>
+              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-When-jflow-sflow-is-enabled-receipt-of-specific-route-updates-causes-rpd-crash-CVE-2025-52955</link>
+              <guid isPermaLink="false">ka0Dp000000jiYOIAY</guid>
+            </item>
+            <item>
               <title>2025-08 Reference Advisory: Session Smart Router: Multiple CVEs reported through Qualys scans</title>
               <description></description>
               <pubDate>Mon, 04 Aug 2025 00:00:00 GMT</pubDate>
@@ -26,13 +33,6 @@
               <pubDate>Tue, 05 Aug 2025 00:00:00 GMT</pubDate>
               <link>https://supportportal.juniper.net/s/article/2024-05-Reference-Advisory-Junos-OS-and-Junos-OS-Evolved-Multiple-CVEs-reported-in-OpenSSH</link>
               <guid isPermaLink="false">ka0Dp000000jiLyIAI</guid>
-            </item>
-            <item>
-              <title>2025-07 Security Bulletin: Junos OS and Junos OS Evolved: When jflow/sflow is configured continuous logical interface flaps causes rpd crash and restart (CVE-2025-52955)</title>
-              <description></description>
-              <pubDate>Wed, 30 Jul 2025 00:00:00 GMT</pubDate>
-              <link>https://supportportal.juniper.net/s/article/2025-07-Security-Bulletin-Junos-OS-When-jflow-sflow-is-enabled-receipt-of-specific-route-updates-causes-rpd-crash-CVE-2025-52955</link>
-              <guid isPermaLink="false">ka0Dp000000jhvbIAA</guid>
             </item>
             <item>
               <title>2025-07 Security Bulletin: Junos OS: Specific unknown traffic pattern causes FPC and system to crash when packet capturing is enabled (CVE-2025-52948)</title>

@@ -157,10 +157,6 @@ function buildApiRequest(action, request) {
             endpoint = `${baseUrl}/check-existing-data?org_id=${encodeURIComponent(request.org_id)}`;
             fetchOptions.method = 'GET';
             break;
-        case 'cve-feed':
-            endpoint = `${baseUrl}/check-cve-feed`;
-            fetchOptions.method = 'GET';
-            break;
         case 'data':
             endpoint = `${baseUrl}/data`;
             fetchOptions.method = 'POST';

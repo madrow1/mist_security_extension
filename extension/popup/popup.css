@@ -8,10 +8,9 @@ body {
     margin: 0;
     padding: 0;
     overflow: hidden; 
-    transition: all 0.3s ease-in-out; /* Smooth resize animation */
+    transition: all 0.3s ease-in-out;
 }
 
-/* Body expansion for chart view */
 body.chart-expanded {
     min-width: 600px;
     min-height: 400px;
@@ -80,7 +79,7 @@ body.chart-expanded {
     margin: 0;
     padding: 15px;
     box-sizing: border-box;
-    display: none; /* Initially hidden */
+    display: none; 
 }
 
 #table-container {
@@ -95,7 +94,7 @@ body.chart-expanded {
     width: 600px; 
     height: 100%;
 }
-/* Button bar and action buttons */
+
 .button-bar {
     display: flex;
     border-top: 1px solid #ccc;

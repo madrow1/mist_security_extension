@@ -794,6 +794,7 @@ def insert_customer_data():
             for site in sites_data:
                 # Since sites_data is a json object we can strip out the "id" parameter to return just the site_id string 
                 site_id = site.get('id')
+                print(site_id)
                 # validates that at minimum the site ID is a string and is greater than 10 chars long
                 if site_id and isinstance(site_id, str) and len(site_id) > 10:
                     site_ids.append(site_id)
